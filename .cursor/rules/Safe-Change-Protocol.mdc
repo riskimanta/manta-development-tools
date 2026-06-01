@@ -1,0 +1,14 @@
+---
+alwaysApply: true
+---
+
+Safe Change Protocol:
+
+When implementing a change:
+
+1. Identify the module being modified.
+2. Do not edit other modules unless explicitly requested.
+3. If a cross-module change is required, explain why before modifying.
+4. Prefer adding or updating tests before modifying logic.
+5. Never mix refactor and feature change in one step.
+6. Preserve existing API response shapes unless explicitly instructed.

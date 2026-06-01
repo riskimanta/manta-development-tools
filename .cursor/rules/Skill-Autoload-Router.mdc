@@ -1,0 +1,29 @@
+---
+description: Route relevant tasks to project skills automatically
+alwaysApply: true
+---
+
+Skill Autoload Router:
+
+When user request or target paths indicate docs impact workflow, load and apply skill:
+- `.cursor/skills/feature-doc-impact/SKILL.md`
+
+Trigger signals for `feature-doc-impact`:
+- User asks to update/sync feature docs
+- User asks whether docs need updates
+- Work includes validation, Prisma schema, Server Actions, or dashboard/project/feature flow changes
+- Target paths or edits include `docs/features/path-map.md` or `docs/features/index.md`
+
+When user request or target paths indicate ManDev admin/settings change workflow, load and apply skill:
+- `.cursor/skills/settings-change-checklist/SKILL.md`
+
+Trigger signals for `settings-change-checklist`:
+- User asks to fix/refactor project or feature forms, filters, or admin UI behavior
+- User requests changes to dashboard shell, sidebar, theme, or toasts
+- Target paths include `src/components/layout/`, `src/components/providers/`, `src/components/projects/`, `src/components/features/`, or Server Actions under `src/app/projects/` or `src/app/features/`
+
+Conflict handling:
+- If multiple workflows match, apply matching skills in this order:
+  1) `feature-doc-impact`
+  2) `settings-change-checklist`
+- Keep architecture and safety rules as higher-priority guardrails.

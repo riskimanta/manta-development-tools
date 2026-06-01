@@ -1,0 +1,17 @@
+---
+alwaysApply: true
+---
+
+Follow [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) strictly.
+
+Architecture constraints:
+- Routes and Server Actions stay thin: validate, call services, revalidate, return UI state.
+- Non-trivial Prisma access belongs in `src/services/*` using the shared client from `src/lib/db.ts`.
+- Zod schemas live in `src/lib/validations/*`.
+
+When fixing bugs:
+- Prefer writing or updating tests first.
+- Do not modify files outside the mentioned module.
+- If changes are required outside the module, explain first before editing.
+
+Never refactor unrelated modules without explicit instruction.

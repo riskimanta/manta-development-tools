@@ -1,0 +1,13 @@
+---
+alwaysApply: true
+---
+
+Refactor Scope Lock:
+
+When asked to fix/refactor something:
+- Only touch files inside the target module path.
+- If a change requires touching other modules, STOP and ask for confirmation (explain why).
+- Prefer adapter pattern: create new function in module, keep old public API stable.
+- Separate commits/PRs:
+  1) pure refactor (no behavior change)
+  2) behavior change (with tests)

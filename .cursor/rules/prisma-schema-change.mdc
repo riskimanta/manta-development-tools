@@ -1,0 +1,93 @@
+---
+description: Required workflow after Prisma schema/model changes
+globs:
+  - "prisma/schema.prisma"
+  - "prisma/migrations/**"
+  - "src/services/**"
+  - "src/lib/db.ts"
+alwaysApply: false
+---
+
+# Prisma Schema Change Rule
+
+## When this applies
+
+Use this rule whenever adding, renaming, removing, or changing a Prisma model, field, relation, enum, migration, or any code that calls a new Prisma Client delegate.
+
+Examples:
+- Adding a model such as `ProjectArchitecture`
+- Adding a relation to an existing model
+- Calling a new delegate such as `db.projectArchitecture`
+- Changing fields used by service functions
+
+## Common failure symptom
+
+If runtime shows:
+
+`Cannot read properties of undefined (reading 'findUnique')`
+
+or similar on a Prisma delegate like:
+
+`db.someModel.findUnique(...)`
+
+then Prisma Client is probably stale or not generated from the current schema.
+
+This is different from a missing database table error. Undefined delegate usually means the generated Prisma Client does not know the model.
+
+## Required workflow
+
+After changing `prisma/schema.prisma`:
+
+1. Create/apply a migration when schema changes need database changes:
+   - `pnpm db:migrate`
+
+2. Regenerate Prisma Client:
+   - `pnpm db:generate`
+
+3. Restart the Next.js dev server after Prisma Client generation.
+
+4. Run:
+   - `pnpm test`
+   - `pnpm typecheck`
+   - `pnpm lint`
+
+5. Manually verify the affected page or action in the browser.
+
+## Verification checklist
+
+Before claiming the task is complete:
+
+- [ ] Migration exists if a database table/field/relation changed
+- [ ] `pnpm db:generate` was run after schema changes
+- [ ] Dev server was restarted after generation
+- [ ] New Prisma delegate exists and is used normally
+- [ ] No optional chaining or defensive fallback is hiding a stale client
+- [ ] `pnpm test` passes
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm lint` passes
+- [ ] Affected route was manually opened without runtime error
+
+## Forbidden shortcuts
+
+Do not fix stale Prisma Client issues by:
+- replacing `db.newModel.findUnique` with `db.newModel?.findUnique`
+- catching the error and returning null
+- bypassing the service layer
+- editing generated Prisma Client files manually
+- assuming migration alone updates Prisma Client
+
+The correct fix is to align schema, migration, generated client, and dev runtime.
+
+## RESULT.md rule
+
+Do not append a new historical section to `RESULT.md`.
+
+Overwrite `RESULT.md` with a concise current-state report containing:
+- Current project summary
+- Current architecture/stack
+- Features implemented
+- Files changed in the current task
+- Database/schema changes if any
+- Test/lint/typecheck status
+- Known limitations
+- Recommended next step

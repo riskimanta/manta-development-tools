@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ManDev (Manta Development Tools)
 
-## Getting Started
+Control-plane dashboard for **projects** and **features**: register repos, capture specs, and filter work before opening target codebases (for example in Cursor).
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js 15 (App Router, currently **15.5.15** for security patches), React 19, TypeScript
+- Tailwind CSS 4, shadcn-style UI (Base UI + Radix primitives where applicable)
+- Prisma ORM with SQLite in development (Postgres-compatible for production)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prerequisites
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js 20+
+- [pnpm](https://pnpm.io/)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+1. Copy environment and adjust if needed:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   cp .env.example .env
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   `DATABASE_URL` defaults to `file:./dev.db` (SQLite file under `prisma/`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Install dependencies (runs `prisma generate` via `postinstall`):
 
-## Deploy on Vercel
+   ```bash
+   pnpm install
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. Apply migrations (creates tables):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   pnpm db:migrate
+   ```
+
+4. Optional seed sample project/feature:
+
+   ```bash
+   pnpm db:seed
+   ```
+
+## Optional password gate
+
+When **`MANDEV_PASSWORD`** is set in `.env`, all dashboard routes require a signed **HttpOnly** session cookie (JWT via [`jose`](https://github.com/panva/jose), 7-day expiry). You must also set **`MANDEV_AUTH_SECRET`** to a random string of **at least 16 characters**.
+
+- Leave both unset for local development without a login screen.
+- Sign in at `/login`. Sign out via **Sign out** in the header/sidebar/mobile menu, or open `/logout`.
+
+## Command palette
+
+Press **⌘K** (macOS) or **Ctrl+K** (Windows/Linux), or use the search field in the header, to jump to dashboard routes and “new project / new feature” screens.
+
+## Scripts
+
+| Command | Description |
+|--------|-------------|
+| `pnpm dev` | Development server (Turbopack) |
+| `pnpm build` | Production build |
+| `pnpm start` | Start production server |
+| `pnpm lint` | ESLint |
+| `pnpm typecheck` | TypeScript check |
+| `pnpm db:generate` | Regenerate Prisma Client |
+| `pnpm db:migrate` | Create/apply dev migrations |
+| `pnpm db:push` | Push schema without migration files (prototyping) |
+| `pnpm db:seed` | Run `prisma/seed.ts` |
+
+## Production database
+
+Point `DATABASE_URL` to Postgres (Neon, Supabase, RDS, etc.) and run migrations in CI or release pipeline (`prisma migrate deploy`).
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layering and data access conventions.
+- [docs/features/](docs/features/) — feature doc index and path map (for agent skills).

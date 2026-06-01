@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+
+Test-First Enforcement:
+
+For any bug fix or refactor:
+1) Write/adjust tests first (unit for domain, integration for API).
+2) Only then modify production code.
+3) If tests are hard to write, explain why and propose the smallest measurable test.
+4) Every change must include: (a) what breaks, (b) the test, (c) the fix, (d) why this won’t break others.
