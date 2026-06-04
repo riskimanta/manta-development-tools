@@ -2,53 +2,87 @@
 
 ## Current project summary
 
-ManDev (`manta-development-tools`) is a local Next.js control-plane dashboard for projects, features, backlog, and per-project architecture diagrams stored in SQLite via Prisma. Optional JWT session auth protects the app when `MANDEV_PASSWORD` is set.
-
-## UX problem solved
-
-The Backlog page split ManDev vs other project work, but **New feature** always opened a generic create form. Users in the ManDev section (or a specific project group) had to pick the project again on `/features/new`.
-
-## Files changed
-
-- `src/lib/feature-new-href.ts` — URL builder and safe project preselection resolver
-- `src/lib/feature-new-href.test.ts` — unit tests
-- `src/app/(app)/features/new/page.tsx` — validate `?projectId=` against known projects
-- `src/app/(app)/backlog/page.tsx` — section-level create links for ManDev and other projects
-- `RESULT.md` — this report
+ManDev (`manta-development-tools`) is a local Next.js control-plane dashboard for managing software projects, features, backlog, and per-project architecture diagrams. Data lives in SQLite via Prisma. Optional JWT session auth protects the app when `MANDEV_PASSWORD` is set.
 
 ## Feature implemented
 
-- **`/features/new?projectId=<id>`** — Project select defaults to that project when the id exists; user can still change it.
-- **Invalid/unknown `projectId`** — Ignored; form behaves like `/features/new` (first project default).
-- **Backlog → ManDev** — **New ManDev backlog item** (outline) when a project with slug `mandev` exists; links to preselected create URL.
-- **Backlog → other projects** — **New item for this project** per project group.
-- **Top-level New feature** — Unchanged at `/features/new`.
-- **No `mandev` project** — Existing amber callout unchanged.
+**Project Run Profiles — Phase 1**
 
-## How project preselection works
+Each project can have multiple run profiles (name, command, working directory, description, default flag). Users manage profiles on Project Detail and copy commands into their own terminal. ManDev stores and copies only — it does not run processes.
 
-1. `buildFeatureNewHref({ projectId })` builds `/features/new?projectId=…`.
-2. On the new-feature page, `resolveDefaultFeatureProjectId(requestedId, projectIds)` returns the id only if it is in `listProjects()`; otherwise `undefined`.
-3. `FeatureCreateForm` uses `defaultValue={defaultProjectId ?? projects[0]?.id}` on the Project `<select>`.
+## Phase 1 safety boundary
 
-## Whether schema changed
+- **Copy-only:** UI offers “Copy command” and “Copy cd + command” via the clipboard API.
+- **No execution:** No shell spawn, terminal UI, process management, stop/restart, or log streaming.
 
-No. Backlog still uses the existing `Feature` model.
+## Database / schema changes
 
-## Test / lint / typecheck status
+New Prisma model `ProjectRunProfile`:
+
+| Field | Notes |
+|-------|--------|
+| `id` | cuid |
+| `projectId` | FK → `Project`, cascade delete |
+| `name` | required |
+| `command` | required |
+| `workingDirectory` | optional; defaults from project `localPath` on create/update when empty |
+| `description` | optional |
+| `isDefault` | boolean; at most one `true` per project (enforced in service transactions) |
+| `createdAt` / `updatedAt` | timestamps |
+
+Migration: `prisma/migrations/20260602120000_add_project_run_profiles/`
+
+## Files changed
+
+| Area | Paths |
+|------|--------|
+| Schema | `prisma/schema.prisma`, migration SQL |
+| Validation | `src/lib/validations/run-profile.ts`, `.test.ts` |
+| Copy helper | `src/lib/run-profile-copy.ts`, `.test.ts` |
+| Services | `src/services/run-profiles.ts`, `.test.ts` |
+| Server Actions | `src/app/projects/run-profiles/actions.ts`, `.test.ts` |
+| UI | `src/components/projects/project-run-profiles-card.tsx`, `project-run-profile-form.tsx`, `delete-run-profile-button.tsx` |
+| Page | `src/app/(app)/projects/[id]/page.tsx` |
+| Report | `RESULT.md` |
+
+## UI changes
+
+On **Project Detail** (left column, after local path actions):
+
+- **Run profiles** card lists profiles with command, working directory, optional description, and **Default** badge.
+- **Copy command** / **Copy cd + command** per profile.
+- **Add run profile** inline form; **Edit** in dialog; **Delete** with confirm.
+- Helper text when no working directory is set on a profile.
+
+No new main navigation item — profiles stay on Project Detail only.
+
+## Copy behavior
+
+| Action | Clipboard content |
+|--------|-------------------|
+| Copy command | Trimmed `command` |
+| Copy cd + command (WD set) | `cd "<workingDirectory>" && <command>` |
+| Copy cd + command (WD missing) | Command only; toast notes no working directory |
+
+Working directory for storage: explicit field, else project `localPath` when saving. Copy uses the stored profile `workingDirectory` (null if neither was available at save time).
+
+## Test / lint / typecheck / migration status
 
 | Check | Status |
 |-------|--------|
-| `pnpm test` | 188 passed (27 files) |
+| `pnpm db:migrate` | Applied `20260602120000_add_project_run_profiles` |
+| `pnpm db:generate` | Pass |
+| `pnpm test` | 208 passed (31 files) |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
 ## Known limitations
 
-- Preselection is query-param only (no session memory).
-- ManDev section header + create link appear when the `mandev` project exists and the backlog list is non-empty; an empty global backlog still uses the generic empty-state actions.
-- Project detail pages still inline `/features/new?projectId=` strings (could share `buildFeatureNewHref` later).
+- Profiles do not auto-refresh when project `localPath` changes after save (re-save profile or edit working directory).
+- No dedicated run-profiles list route or global nav.
+- Clipboard copy requires a secure context / browser permission.
+- Checkbox “default” does not prevent having zero defaults (only enforces single default when one is marked).
 
 ## Recommended next step
 
-Manually verify: open `/backlog` with a `mandev` project, use **New ManDev backlog item**, confirm Project is preselected; try `/features/new?projectId=invalid` and confirm fallback; use **New item for this project** on another group.
+**Phase 2 (optional):** Run command from UI with explicit user confirmation, cwd validation, and safety guardrails — still out of scope for Phase 1. For now, manually verify on a project with `localPath` set: create profiles, copy both variants, mark default, and confirm only one default badge appears.
