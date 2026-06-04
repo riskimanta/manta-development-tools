@@ -2,87 +2,98 @@
 
 ## Current project summary
 
-ManDev (`manta-development-tools`) is a local Next.js control-plane dashboard for managing software projects, features, backlog, and per-project architecture diagrams. Data lives in SQLite via Prisma. Optional JWT session auth protects the app when `MANDEV_PASSWORD` is set.
+ManDev (`manta-development-tools`) is a local Next.js control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Data lives in SQLite via Prisma. Optional JWT session auth protects the app when `MANDEV_PASSWORD` is set.
 
 ## Feature implemented
 
-**Project Run Profiles — Phase 1**
+**Run Profiles Importer — Phase 1.5**
 
-Each project can have multiple run profiles (name, command, working directory, description, default flag). Users manage profiles on Project Detail and copy commands into their own terminal. ManDev stores and copies only — it does not run processes.
+ManDev can import run profiles from a target project’s `.mandev/run-profiles.json`, using the same workflow as architecture import: copy an AI prompt into Cursor, generate the file in the target repo, then read/import from the project’s configured `localPath`. Profiles are created or updated by name; nothing is deleted. ManDev still does not execute commands.
 
-## Phase 1 safety boundary
+## Safety boundary
 
-- **Copy-only:** UI offers “Copy command” and “Copy cd + command” via the clipboard API.
-- **No execution:** No shell spawn, terminal UI, process management, stop/restart, or log streaming.
+- **Import/copy only:** Read JSON from disk, validate, upsert profiles; copy AI prompt and run commands to clipboard.
+- **No execution:** No shell spawn, terminal UI, process manager, logs, stop/restart, or file upload in the browser.
 
-## Database / schema changes
+## File format (`.mandev/run-profiles.json`)
 
-New Prisma model `ProjectRunProfile`:
+```json
+{
+  "profiles": [
+    {
+      "name": "Dev Server",
+      "command": "pnpm dev",
+      "workingDirectory": ".",
+      "description": "Run the Next.js development server",
+      "isDefault": true
+    }
+  ]
+}
+```
 
-| Field | Notes |
-|-------|--------|
-| `id` | cuid |
-| `projectId` | FK → `Project`, cascade delete |
-| `name` | required |
-| `command` | required |
-| `workingDirectory` | optional; defaults from project `localPath` on create/update when empty |
-| `description` | optional |
-| `isDefault` | boolean; at most one `true` per project (enforced in service transactions) |
-| `createdAt` / `updatedAt` | timestamps |
+Validation: root `profiles` (non-empty array); each profile requires `name` and `command`; optional `workingDirectory`, `description`, `isDefault` (boolean). **At most one** profile may have `isDefault: true` — otherwise import fails with a clear validation error (safer than silently picking the first).
 
-Migration: `prisma/migrations/20260602120000_add_project_run_profiles/`
+## Import behavior
+
+| Rule | Behavior |
+|------|----------|
+| Match key | `projectId` + profile `name` (trimmed) |
+| New name | Create profile |
+| Existing name | Update command, working directory, description, `isDefault` |
+| Names not in file | Left unchanged (no delete) |
+| Default in file | If any imported profile has `isDefault: true`, all other defaults for the project are cleared first, then that profile is saved as default |
+
+## Working directory on import
+
+| Input | Stored value |
+|-------|----------------|
+| Missing / empty | Project `localPath` when set |
+| `"."` | Project `localPath` |
+| Relative path | Resolved with `path.resolve(localPath, relative)` |
+| Absolute path | Stored as-is |
+
+## UI changes
+
+On **Project Detail → Run profiles** card:
+
+- **Copy AI run profiles prompt** — Cursor instructions to inspect the repo and write `.mandev/run-profiles.json`
+- **Read run profiles from local path** — server action reads `<localPath>/.mandev/run-profiles.json`
+- Helper text: not a file upload; reads from configured local path
+- Toasts: `AI run profiles prompt copied` / `Run profiles loaded from local path`
+
+## Schema changed
+
+**No.** Phase 1 `ProjectRunProfile` model is unchanged; no new migration.
 
 ## Files changed
 
 | Area | Paths |
 |------|--------|
-| Schema | `prisma/schema.prisma`, migration SQL |
-| Validation | `src/lib/validations/run-profile.ts`, `.test.ts` |
-| Copy helper | `src/lib/run-profile-copy.ts`, `.test.ts` |
-| Services | `src/services/run-profiles.ts`, `.test.ts` |
-| Server Actions | `src/app/projects/run-profiles/actions.ts`, `.test.ts` |
-| UI | `src/components/projects/project-run-profiles-card.tsx`, `project-run-profile-form.tsx`, `delete-run-profile-button.tsx` |
+| Validation | `src/lib/validations/run-profile-import.ts`, `.test.ts` |
+| Local reader | `src/lib/local-run-profiles-import.ts`, `.test.ts` |
+| AI prompt | `src/lib/run-profiles-import-template.ts`, `.test.ts` |
+| Service | `src/services/run-profiles.ts`, `.test.ts` |
+| Server Action | `src/app/projects/run-profiles/actions.ts`, `.test.ts` |
+| UI | `src/components/projects/project-run-profiles-card.tsx`, `project-run-profiles-import.tsx` |
 | Page | `src/app/(app)/projects/[id]/page.tsx` |
 | Report | `RESULT.md` |
 
-## UI changes
-
-On **Project Detail** (left column, after local path actions):
-
-- **Run profiles** card lists profiles with command, working directory, optional description, and **Default** badge.
-- **Copy command** / **Copy cd + command** per profile.
-- **Add run profile** inline form; **Edit** in dialog; **Delete** with confirm.
-- Helper text when no working directory is set on a profile.
-
-No new main navigation item — profiles stay on Project Detail only.
-
-## Copy behavior
-
-| Action | Clipboard content |
-|--------|-------------------|
-| Copy command | Trimmed `command` |
-| Copy cd + command (WD set) | `cd "<workingDirectory>" && <command>` |
-| Copy cd + command (WD missing) | Command only; toast notes no working directory |
-
-Working directory for storage: explicit field, else project `localPath` when saving. Copy uses the stored profile `workingDirectory` (null if neither was available at save time).
-
-## Test / lint / typecheck / migration status
+## Test / lint / typecheck status
 
 | Check | Status |
 |-------|--------|
-| `pnpm db:migrate` | Applied `20260602120000_add_project_run_profiles` |
-| `pnpm db:generate` | Pass |
-| `pnpm test` | 208 passed (31 files) |
+| `pnpm test` | 231 passed (34 files) |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
 ## Known limitations
 
-- Profiles do not auto-refresh when project `localPath` changes after save (re-save profile or edit working directory).
-- No dedicated run-profiles list route or global nav.
-- Clipboard copy requires a secure context / browser permission.
-- Checkbox “default” does not prevent having zero defaults (only enforces single default when one is marked).
+- Import requires project `localPath`; no upload fallback.
+- Profiles not listed in the JSON file are never removed automatically.
+- Only one `isDefault: true` per import file; fix the JSON and re-import if Cursor marks multiple defaults.
+- Imported working directories are not re-resolved when `localPath` changes later (same as manual profiles).
+- No Phase 2 command execution or Phase 3 process/logs UI.
 
 ## Recommended next step
 
-**Phase 2 (optional):** Run command from UI with explicit user confirmation, cwd validation, and safety guardrails — still out of scope for Phase 1. For now, manually verify on a project with `localPath` set: create profiles, copy both variants, mark default, and confirm only one default badge appears.
+Manually verify on a project with `localPath`: copy AI prompt → generate `.mandev/run-profiles.json` in the target repo → import → confirm create/update by name and a single default badge. Optional **Phase 2:** run command from UI with explicit confirmation and cwd guardrails.

@@ -81,7 +81,9 @@ export default async function ProjectDetailPage({ params }: Props) {
           ) : null}
           <ProjectRunProfilesCard
             projectId={project.id}
+            projectName={project.name}
             projectLocalPath={project.localPath}
+            projectRepoUrl={project.repoUrl}
             profiles={runProfiles}
           />
           <ProjectArchitectureCard

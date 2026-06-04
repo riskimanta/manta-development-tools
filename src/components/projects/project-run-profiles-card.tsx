@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { Copy, Pencil, Plus } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { Copy, Pencil, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteRunProfileButton } from "@/components/projects/delete-run-profile-button";
+import { ProjectRunProfilesImport } from "@/components/projects/project-run-profiles-import";
 import {
   ProjectRunProfileForm,
   type RunProfileFormValues,
@@ -29,6 +30,7 @@ import {
   buildRunProfileCdCommandCopy,
   buildRunProfileCommandCopy,
 } from "@/lib/run-profile-copy";
+import { buildRunProfilesImportCursorPrompt } from "@/lib/run-profiles-import-template";
 
 export type RunProfileListItem = {
   id: string;
@@ -41,7 +43,9 @@ export type RunProfileListItem = {
 
 type Props = {
   projectId: string;
+  projectName: string;
   projectLocalPath: string | null;
+  projectRepoUrl?: string | null;
   profiles: RunProfileListItem[];
 };
 
@@ -192,7 +196,9 @@ function RunProfileRow({
 
 export function ProjectRunProfilesCard({
   projectId,
+  projectName,
   projectLocalPath,
+  projectRepoUrl,
   profiles,
 }: Props) {
   const [creating, setCreating] = useState(false);
@@ -203,6 +209,25 @@ export function ProjectRunProfilesCard({
     setCreating(false);
     setEditingProfile(null);
   }, []);
+
+  const aiRunProfilesPrompt = useMemo(
+    () =>
+      buildRunProfilesImportCursorPrompt({
+        name: projectName,
+        localPath: projectLocalPath,
+        repoUrl: projectRepoUrl,
+      }),
+    [projectName, projectLocalPath, projectRepoUrl],
+  );
+
+  async function handleCopyAiRunProfilesPrompt() {
+    const ok = await copyText(aiRunProfilesPrompt);
+    if (ok) {
+      toast.success("AI run profiles prompt copied");
+    } else {
+      toast.error("Could not copy AI run profiles prompt");
+    }
+  }
 
   const editFormValues: RunProfileFormValues | undefined = editingProfile
     ? {
@@ -225,6 +250,24 @@ export function ProjectRunProfilesCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleCopyAiRunProfilesPrompt}
+          >
+            <Sparkles className="size-3.5" />
+            Copy AI run profiles prompt
+          </Button>
+        </div>
+
+        <ProjectRunProfilesImport
+          projectId={projectId}
+          localPath={projectLocalPath}
+        />
+
         {profiles.length === 0 && !creating ? (
           <EmptyState
             title="No run profiles yet"

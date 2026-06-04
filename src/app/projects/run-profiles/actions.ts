@@ -10,6 +10,8 @@ import { getProjectById } from "@/services/projects";
 import {
   createRunProfileRecord,
   deleteRunProfileRecord,
+  importProjectRunProfilesFromLocalFile,
+  RunProfileImportServiceError,
   RunProfileServiceError,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
@@ -111,5 +113,29 @@ export async function deleteRunProfile(formData: FormData): Promise<void> {
 
   if (typeof projectId === "string" && projectId) {
     revalidatePath(`/projects/${projectId}`);
+  }
+}
+
+export async function importRunProfilesFromLocalPathAction(
+  _prev: RunProfileActionState | undefined,
+  formData: FormData,
+): Promise<RunProfileActionState> {
+  const projectId = formData.get("projectId");
+  if (typeof projectId !== "string" || !projectId.trim()) {
+    return { message: "Project is required" };
+  }
+
+  try {
+    await importProjectRunProfilesFromLocalFile(projectId.trim());
+    revalidatePath(`/projects/${projectId.trim()}`);
+    return {
+      ok: true,
+      message: "Run profiles loaded from local path",
+    };
+  } catch (e) {
+    if (e instanceof RunProfileImportServiceError) {
+      return { message: e.message };
+    }
+    throw e;
   }
 }

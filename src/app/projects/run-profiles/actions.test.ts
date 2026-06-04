@@ -5,12 +5,14 @@ import { getProjectById } from "@/services/projects";
 import {
   createRunProfileRecord,
   deleteRunProfileRecord,
+  importProjectRunProfilesFromLocalFile,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
 
 import {
   createRunProfile,
   deleteRunProfile,
+  importRunProfilesFromLocalPathAction,
   updateRunProfile,
 } from "./actions";
 
@@ -18,7 +20,15 @@ vi.mock("@/services/run-profiles", () => ({
   createRunProfileRecord: vi.fn(),
   updateRunProfileRecord: vi.fn(),
   deleteRunProfileRecord: vi.fn(),
+  importProjectRunProfilesFromLocalFile: vi.fn(),
   RunProfileServiceError: class RunProfileServiceError extends Error {
+    code: string;
+    constructor(code: string, message: string) {
+      super(message);
+      this.code = code;
+    }
+  },
+  RunProfileImportServiceError: class RunProfileImportServiceError extends Error {
     code: string;
     constructor(code: string, message: string) {
       super(message);
@@ -126,6 +136,48 @@ describe("updateRunProfile", () => {
     expect(updateRunProfileRecord).toHaveBeenCalled();
     expect(revalidatePath).toHaveBeenCalledWith("/projects/proj-1");
     expect(result).toEqual({ ok: true, message: "Run profile updated" });
+  });
+});
+
+describe("importRunProfilesFromLocalPathAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns error when project id is missing", async () => {
+    const formData = new FormData();
+
+    const result = await importRunProfilesFromLocalPathAction(
+      undefined,
+      formData,
+    );
+
+    expect(result).toEqual({ message: "Project is required" });
+    expect(importProjectRunProfilesFromLocalFile).not.toHaveBeenCalled();
+  });
+
+  it("imports profiles and revalidates on success", async () => {
+    vi.mocked(importProjectRunProfilesFromLocalFile).mockResolvedValue({
+      created: 2,
+      updated: 0,
+    });
+
+    const formData = new FormData();
+    formData.set("projectId", "proj-1");
+
+    const result = await importRunProfilesFromLocalPathAction(
+      undefined,
+      formData,
+    );
+
+    expect(importProjectRunProfilesFromLocalFile).toHaveBeenCalledWith(
+      "proj-1",
+    );
+    expect(revalidatePath).toHaveBeenCalledWith("/projects/proj-1");
+    expect(result).toEqual({
+      ok: true,
+      message: "Run profiles loaded from local path",
+    });
   });
 });
 
