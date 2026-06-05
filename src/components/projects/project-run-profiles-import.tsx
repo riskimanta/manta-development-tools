@@ -19,7 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { RunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
+import type {
+  RunProfileImportPreviewField,
+  RunProfileImportPreviewFieldChange,
+  RunProfileImportPreviewUpdate,
+  RunProfilesImportPreview,
+} from "@/lib/run-profiles-import-preview";
 
 type Props = {
   projectId: string;
@@ -30,6 +35,90 @@ const initialState: RunProfileActionState | undefined = undefined;
 
 const previewListClassName =
   "max-h-28 space-y-1 overflow-y-auto rounded-md border border-border/70 bg-muted/15 p-2";
+
+const previewUpdateListClassName =
+  "max-h-40 space-y-2 overflow-y-auto rounded-md border border-border/70 bg-muted/15 p-2";
+
+const fieldLabels: Record<RunProfileImportPreviewField, string> = {
+  command: "Command",
+  workingDirectory: "Working directory",
+  description: "Description",
+  isDefault: "Default",
+};
+
+function formatDiffValue(
+  field: RunProfileImportPreviewField,
+  value: string | boolean | null,
+): string {
+  if (field === "isDefault") {
+    return value ? "true" : "false";
+  }
+
+  if (value === null || value === "") {
+    return field === "workingDirectory" ? "Not set" : "Empty";
+  }
+
+  return String(value);
+}
+
+function PreviewFieldChange({
+  change,
+}: {
+  change: RunProfileImportPreviewFieldChange;
+}) {
+  const isCodeField =
+    change.field === "command" || change.field === "workingDirectory";
+  const before = formatDiffValue(change.field, change.before);
+  const after = formatDiffValue(change.field, change.after);
+  const valueClassName = isCodeField
+    ? "font-mono text-[10px] text-foreground/90"
+    : "text-[10px] text-foreground/90";
+
+  return (
+    <li className="space-y-0.5">
+      <p className="text-[10px] font-medium text-muted-foreground">
+        {fieldLabels[change.field]}
+      </p>
+      <p className={valueClassName}>
+        <span className="text-muted-foreground">{before}</span>
+        <span className="mx-1 text-muted-foreground/70">→</span>
+        <span>{after}</span>
+      </p>
+    </li>
+  );
+}
+
+function PreviewUpdateList({
+  items,
+  emptyLabel,
+}: {
+  items: RunProfileImportPreviewUpdate[];
+  emptyLabel: string;
+}) {
+  if (items.length === 0) {
+    return <p className="text-xs text-muted-foreground">{emptyLabel}</p>;
+  }
+
+  return (
+    <ul className={previewUpdateListClassName}>
+      {items.map((item) => (
+        <li key={item.name} className="space-y-1">
+          <p className="truncate font-mono text-[11px] font-medium text-foreground/90">
+            {item.name}
+          </p>
+          <ul className="space-y-1.5 border-l border-border/60 pl-2">
+            {item.changes.map((change) => (
+              <PreviewFieldChange
+                key={`${item.name}-${change.field}`}
+                change={change}
+              />
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function PreviewNameList({
   items,
@@ -128,11 +217,11 @@ function RunProfilesImportPreviewDialog({
                 emptyLabel="No new profiles"
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 sm:col-span-2">
               <p className="text-xs font-medium text-muted-foreground">
                 To update
               </p>
-              <PreviewNameList
+              <PreviewUpdateList
                 items={preview.update}
                 emptyLabel="No profile updates"
               />

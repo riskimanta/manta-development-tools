@@ -17,8 +17,20 @@ export type RunProfileImportPreviewEntry = {
   isDefault: boolean;
 };
 
+export type RunProfileImportPreviewField =
+  | "command"
+  | "workingDirectory"
+  | "description"
+  | "isDefault";
+
+export type RunProfileImportPreviewFieldChange = {
+  field: RunProfileImportPreviewField;
+  before: string | boolean | null;
+  after: string | boolean | null;
+};
+
 export type RunProfileImportPreviewUpdate = RunProfileImportPreviewEntry & {
-  changes: Array<"command" | "workingDirectory" | "description" | "isDefault">;
+  changes: RunProfileImportPreviewFieldChange[];
 };
 
 export type RunProfileImportPreviewKept = {
@@ -81,20 +93,36 @@ function toComparableExisting(
 function getProfileChanges(
   existing: ComparableProfile,
   imported: ComparableProfile,
-): RunProfileImportPreviewUpdate["changes"] {
-  const changes: RunProfileImportPreviewUpdate["changes"] = [];
+): RunProfileImportPreviewFieldChange[] {
+  const changes: RunProfileImportPreviewFieldChange[] = [];
 
   if (existing.command !== imported.command) {
-    changes.push("command");
+    changes.push({
+      field: "command",
+      before: existing.command,
+      after: imported.command,
+    });
   }
   if (existing.workingDirectory !== imported.workingDirectory) {
-    changes.push("workingDirectory");
+    changes.push({
+      field: "workingDirectory",
+      before: existing.workingDirectory,
+      after: imported.workingDirectory,
+    });
   }
   if (existing.description !== imported.description) {
-    changes.push("description");
+    changes.push({
+      field: "description",
+      before: existing.description,
+      after: imported.description,
+    });
   }
   if (existing.isDefault !== imported.isDefault) {
-    changes.push("isDefault");
+    changes.push({
+      field: "isDefault",
+      before: existing.isDefault,
+      after: imported.isDefault,
+    });
   }
 
   return changes;

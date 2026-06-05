@@ -80,7 +80,18 @@ describe("buildRunProfilesImportPreview", () => {
         workingDirectory: projectLocalPath,
         description: "Unit tests",
         isDefault: false,
-        changes: ["command", "description"],
+        changes: [
+          {
+            field: "command",
+            before: "pnpm test",
+            after: "pnpm test:unit",
+          },
+          {
+            field: "description",
+            before: null,
+            after: "Unit tests",
+          },
+        ],
       },
     ]);
     expect(preview.create).toEqual([]);
@@ -236,6 +247,189 @@ describe("buildRunProfilesImportPreview", () => {
     );
     expect(preview.create[1]?.workingDirectory).toBe("/opt/run");
     expect(preview.create[2]?.workingDirectory).toBe(projectLocalPath);
+  });
+
+  it("includes command diff when command changes", () => {
+    const preview = buildRunProfilesImportPreview({
+      existing: existingProfiles,
+      imported: [
+        {
+          name: "Tests",
+          command: "pnpm test:unit",
+          workingDirectory: null,
+          description: null,
+          isDefault: false,
+        },
+      ],
+      projectLocalPath,
+    });
+
+    expect(preview.update).toHaveLength(1);
+    expect(preview.update[0]?.changes).toEqual([
+      {
+        field: "command",
+        before: "pnpm test",
+        after: "pnpm test:unit",
+      },
+    ]);
+  });
+
+  it("includes resolved workingDirectory diff when working directory changes", () => {
+    const preview = buildRunProfilesImportPreview({
+      existing: existingProfiles,
+      imported: [
+        {
+          name: "Legacy",
+          command: "npm start",
+          workingDirectory: "apps/web",
+          description: "Old script",
+          isDefault: false,
+        },
+      ],
+      projectLocalPath,
+    });
+
+    expect(preview.update).toHaveLength(1);
+    expect(preview.update[0]?.changes).toEqual([
+      {
+        field: "workingDirectory",
+        before: null,
+        after: "/Users/dev/app/apps/web",
+      },
+    ]);
+  });
+
+  it("includes description diff when description changes", () => {
+    const preview = buildRunProfilesImportPreview({
+      existing: existingProfiles,
+      imported: [
+        {
+          name: "Dev",
+          command: "pnpm dev",
+          workingDirectory: ".",
+          description: "Updated dev server",
+          isDefault: true,
+        },
+      ],
+      projectLocalPath,
+    });
+
+    expect(preview.update).toHaveLength(1);
+    expect(preview.update[0]?.changes).toEqual([
+      {
+        field: "description",
+        before: "Dev server",
+        after: "Updated dev server",
+      },
+    ]);
+  });
+
+  it("includes isDefault diff when default flag changes", () => {
+    const preview = buildRunProfilesImportPreview({
+      existing: existingProfiles,
+      imported: [
+        {
+          name: "Tests",
+          command: "pnpm test",
+          workingDirectory: null,
+          description: null,
+          isDefault: true,
+        },
+      ],
+      projectLocalPath,
+    });
+
+    expect(preview.update).toHaveLength(1);
+    expect(preview.update[0]?.changes).toEqual([
+      {
+        field: "isDefault",
+        before: false,
+        after: true,
+      },
+    ]);
+  });
+
+  it("treats empty descriptions as null in diffs", () => {
+    const preview = buildRunProfilesImportPreview({
+      existing: [
+        {
+          name: "Sparse",
+          command: "pnpm dev",
+          workingDirectory: projectLocalPath,
+          description: "   ",
+          isDefault: false,
+        },
+      ],
+      imported: [
+        {
+          name: "Sparse",
+          command: "pnpm dev",
+          workingDirectory: ".",
+          description: "Notes",
+          isDefault: false,
+        },
+      ],
+      projectLocalPath,
+    });
+
+    expect(preview.update[0]?.changes).toEqual([
+      {
+        field: "description",
+        before: null,
+        after: "Notes",
+      },
+    ]);
+  });
+
+  it("unchanged profiles have no changes array", () => {
+    const preview = buildRunProfilesImportPreview({
+      existing: existingProfiles,
+      imported: [
+        {
+          name: "Dev",
+          command: "pnpm dev",
+          workingDirectory: ".",
+          description: "Dev server",
+          isDefault: true,
+        },
+      ],
+      projectLocalPath,
+    });
+
+    expect(preview.unchanged).toHaveLength(1);
+    expect(preview.unchanged[0]).not.toHaveProperty("changes");
+    expect(preview.update).toEqual([]);
+  });
+
+  it("create and kept entries remain unchanged without field diffs", () => {
+    const preview = buildRunProfilesImportPreview({
+      existing: existingProfiles,
+      imported: [
+        {
+          name: "Build",
+          command: "pnpm build",
+          workingDirectory: null,
+          description: null,
+          isDefault: false,
+        },
+        {
+          name: "Dev",
+          command: "pnpm dev",
+          workingDirectory: ".",
+          description: "Dev server",
+          isDefault: true,
+        },
+      ],
+      projectLocalPath,
+    });
+
+    expect(preview.create).toHaveLength(1);
+    expect(preview.create[0]).not.toHaveProperty("changes");
+    expect(preview.kept).toEqual([
+      { name: "Tests", isDefault: false },
+      { name: "Legacy", isDefault: false },
+    ]);
+    expect(preview.kept[0]).not.toHaveProperty("changes");
   });
 
   it("matches existing profiles by trimmed name", () => {

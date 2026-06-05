@@ -232,7 +232,13 @@ describe("previewProjectRunProfilesImportFromLocalFile", () => {
     expect(preview.update).toEqual([
       expect.objectContaining({
         name: "Dev",
-        changes: ["command"],
+        changes: [
+          {
+            field: "command",
+            before: "pnpm start",
+            after: "pnpm dev",
+          },
+        ],
       }),
     ]);
     expect(preview.kept).toEqual([{ name: "Legacy", isDefault: false }]);
