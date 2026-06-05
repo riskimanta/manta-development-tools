@@ -1,0 +1,71 @@
+{
+  "profiles": [
+    {
+      "name": "Dev Server",
+      "command": "pnpm dev",
+      "workingDirectory": ".",
+      "description": "Run the Next.js development server with Turbopack",
+      "isDefault": true
+    },
+    {
+      "name": "Build",
+      "command": "pnpm build",
+      "workingDirectory": ".",
+      "description": "Create a production build"
+    },
+    {
+      "name": "Start",
+      "command": "pnpm start",
+      "workingDirectory": ".",
+      "description": "Start the production server (run build first)"
+    },
+    {
+      "name": "Lint",
+      "command": "pnpm lint",
+      "workingDirectory": ".",
+      "description": "Run ESLint across the project"
+    },
+    {
+      "name": "Typecheck",
+      "command": "pnpm typecheck",
+      "workingDirectory": ".",
+      "description": "Run TypeScript compiler without emitting files"
+    },
+    {
+      "name": "Test",
+      "command": "pnpm test",
+      "workingDirectory": ".",
+      "description": "Run Vitest test suite once"
+    },
+    {
+      "name": "Test Watch",
+      "command": "pnpm test:watch",
+      "workingDirectory": ".",
+      "description": "Run Vitest in watch mode"
+    },
+    {
+      "name": "DB Migrate",
+      "command": "pnpm db:migrate",
+      "workingDirectory": ".",
+      "description": "Create and apply Prisma dev migrations"
+    },
+    {
+      "name": "DB Push",
+      "command": "pnpm db:push",
+      "workingDirectory": ".",
+      "description": "Push Prisma schema to the database without migration files"
+    },
+    {
+      "name": "DB Seed",
+      "command": "pnpm db:seed",
+      "workingDirectory": ".",
+      "description": "Seed the database with sample project and feature data"
+    },
+    {
+      "name": "DB Generate",
+      "command": "pnpm db:generate",
+      "workingDirectory": ".",
+      "description": "Regenerate Prisma Client"
+    }
+  ]
+}
