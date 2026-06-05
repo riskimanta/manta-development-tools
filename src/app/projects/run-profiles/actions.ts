@@ -8,9 +8,11 @@ import {
 } from "@/lib/validations/run-profile";
 import { getProjectById } from "@/services/projects";
 import type { RunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
+import type { RunProfileExecutionResult } from "@/lib/run-profile-execution";
 import {
   createRunProfileRecord,
   deleteRunProfileRecord,
+  executeRunProfileCommand,
   importProjectRunProfilesFromLocalFile,
   previewProjectRunProfilesImportFromLocalFile,
   RunProfileImportServiceError,
@@ -137,6 +139,36 @@ export async function previewRunProfilesImportFromLocalPathAction(
   } catch (e) {
     if (e instanceof RunProfileImportServiceError) {
       return { ok: false, message: e.message };
+    }
+    throw e;
+  }
+}
+
+export async function executeRunProfileAction(
+  profileId: string,
+): Promise<RunProfileExecutionResult> {
+  const id = profileId.trim();
+  if (!id) {
+    return {
+      status: "blocked",
+      exitCode: null,
+      stdoutPreview: "",
+      stderrPreview: "",
+      message: "Run profile is required.",
+    };
+  }
+
+  try {
+    return await executeRunProfileCommand(id);
+  } catch (e) {
+    if (e instanceof RunProfileServiceError) {
+      return {
+        status: "blocked",
+        exitCode: null,
+        stdoutPreview: "",
+        stderrPreview: "",
+        message: e.message,
+      };
     }
     throw e;
   }

@@ -4,13 +4,33 @@ import { db } from "@/lib/db";
 
 import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-import";
 
+import * as runProfileExecution from "@/lib/run-profile-execution";
+
 import {
   createRunProfileRecord,
+  executeRunProfileCommand,
   importProjectRunProfilesFromLocalFile,
   previewProjectRunProfilesImportFromLocalFile,
   resolveRunProfileWorkingDirectory,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
+
+vi.mock("@/lib/mandev-command-execution", () => ({
+  isCommandExecutionEnabled: vi.fn(),
+  COMMAND_EXECUTION_DISABLED_MESSAGE:
+    "Command execution is disabled. Set MANDEV_ENABLE_COMMAND_EXECUTION=true to enable local run actions.",
+}));
+
+vi.mock("@/lib/run-profile-execution", async (importOriginal) => {
+  const actual = await importOriginal<typeof runProfileExecution>();
+  return {
+    ...actual,
+    executeSavedRunProfileCommand: vi.fn(),
+  };
+});
+
+import { isCommandExecutionEnabled } from "@/lib/mandev-command-execution";
+import { executeSavedRunProfileCommand } from "@/lib/run-profile-execution";
 
 vi.mock("@/lib/local-run-profiles-import", () => ({
   readRunProfilesImportFromLocalPath: vi.fn(),
@@ -389,5 +409,70 @@ describe("updateRunProfileRecord", () => {
         null,
       ),
     ).rejects.toMatchObject({ code: "RUN_PROFILE_NOT_FOUND" });
+  });
+});
+
+describe("executeRunProfileCommand", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns disabled when command execution env flag is off", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(false);
+
+    const result = await executeRunProfileCommand("rp-1");
+
+    expect(result).toEqual({
+      status: "disabled",
+      exitCode: null,
+      stdoutPreview: "",
+      stderrPreview: "",
+      message:
+        "Command execution is disabled. Set MANDEV_ENABLE_COMMAND_EXECUTION=true to enable local run actions.",
+    });
+    expect(db.projectRunProfile.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("blocks when working directory is missing on saved profile", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue({
+      ...mockProfile,
+      workingDirectory: null,
+    });
+
+    const result = await executeRunProfileCommand("rp-1");
+
+    expect(result.status).toBe("blocked");
+    expect(result.message).toMatch(/working directory/i);
+    expect(executeSavedRunProfileCommand).not.toHaveBeenCalled();
+  });
+
+  it("delegates to execution helper for saved profile records", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(mockProfile);
+    vi.mocked(executeSavedRunProfileCommand).mockResolvedValue({
+      status: "success",
+      exitCode: 0,
+      stdoutPreview: "ok",
+      stderrPreview: "",
+      message: "Command finished with exit code 0.",
+    });
+
+    const result = await executeRunProfileCommand("rp-1");
+
+    expect(executeSavedRunProfileCommand).toHaveBeenCalledWith({
+      command: "pnpm dev",
+      workingDirectory: "/Users/dev/app",
+    });
+    expect(result.status).toBe("success");
+  });
+
+  it("throws when profile is not found", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(null);
+
+    await expect(executeRunProfileCommand("missing")).rejects.toMatchObject({
+      code: "RUN_PROFILE_NOT_FOUND",
+    });
   });
 });

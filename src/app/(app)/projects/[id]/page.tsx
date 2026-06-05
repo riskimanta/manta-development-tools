@@ -12,6 +12,7 @@ import { DeleteProjectButton } from "@/components/projects/delete-project-button
 import { ProjectEditForm } from "@/components/projects/project-edit-form";
 import { ProjectLocalPathActions } from "@/components/projects/project-local-path-actions";
 import { buildDefaultArchitectureTemplate } from "@/lib/architecture-template";
+import { isCommandExecutionEnabled } from "@/lib/mandev-command-execution";
 import { featureStatusLabel, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getProjectArchitecture } from "@/services/architectures";
@@ -85,6 +86,7 @@ export default async function ProjectDetailPage({ params }: Props) {
             projectLocalPath={project.localPath}
             projectRepoUrl={project.repoUrl}
             profiles={runProfiles}
+            commandExecutionEnabled={isCommandExecutionEnabled()}
           />
           <ProjectArchitectureCard
             project={{

@@ -21,11 +21,13 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteRunProfileButton } from "@/components/projects/delete-run-profile-button";
+import { RunRunProfileButton } from "@/components/projects/run-run-profile-button";
 import { ProjectRunProfilesImport } from "@/components/projects/project-run-profiles-import";
 import {
   ProjectRunProfileForm,
   type RunProfileFormValues,
 } from "@/components/projects/project-run-profile-form";
+import { COMMAND_EXECUTION_DISABLED_MESSAGE } from "@/lib/mandev-command-execution";
 import {
   buildRunProfileCdCommandCopy,
   buildRunProfileCommandCopy,
@@ -49,6 +51,7 @@ type Props = {
   projectLocalPath: string | null;
   projectRepoUrl?: string | null;
   profiles: RunProfileListItem[];
+  commandExecutionEnabled?: boolean;
 };
 
 async function copyText(text: string): Promise<boolean> {
@@ -66,10 +69,12 @@ const previewCodeClassName =
 function RunProfileRow({
   profile,
   projectId,
+  commandExecutionEnabled,
   onEdit,
 }: {
   profile: RunProfileListItem;
   projectId: string;
+  commandExecutionEnabled: boolean;
   onEdit: (profile: RunProfileListItem) => void;
 }) {
   const copyInput = {
@@ -187,6 +192,14 @@ function RunProfileRow({
           <Copy className="size-3.5" />
           Copy cd + command
         </Button>
+        {commandExecutionEnabled ? (
+          <RunRunProfileButton
+            profileId={profile.id}
+            profileName={profile.name}
+            command={profile.command}
+            workingDirectory={profile.workingDirectory}
+          />
+        ) : null}
       </div>
     </li>
   );
@@ -198,6 +211,7 @@ export function ProjectRunProfilesCard({
   projectLocalPath,
   projectRepoUrl,
   profiles,
+  commandExecutionEnabled = false,
 }: Props) {
   const [creating, setCreating] = useState(false);
   const [editingProfile, setEditingProfile] =
@@ -244,10 +258,21 @@ export function ProjectRunProfilesCard({
         <CardTitle className="text-base font-medium">Run profiles</CardTitle>
         <CardDescription>
           Store local run commands for this project. Copy them into your
-          terminal — ManDev does not run commands in this phase.
+          terminal, or run saved profiles locally when command execution is
+          enabled.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!commandExecutionEnabled ? (
+          <p className="rounded-md border border-dashed border-border/70 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
+            {COMMAND_EXECUTION_DISABLED_MESSAGE}
+          </p>
+        ) : (
+          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90">
+            Local command execution is enabled. Only saved run profiles can be
+            executed — experimental, local-only.
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -291,6 +316,7 @@ export function ProjectRunProfilesCard({
                 key={profile.id}
                 profile={profile}
                 projectId={projectId}
+                commandExecutionEnabled={commandExecutionEnabled}
                 onEdit={setEditingProfile}
               />
             ))}

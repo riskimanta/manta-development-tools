@@ -5,6 +5,7 @@ import { getProjectById } from "@/services/projects";
 import {
   createRunProfileRecord,
   deleteRunProfileRecord,
+  executeRunProfileCommand,
   importProjectRunProfilesFromLocalFile,
   previewProjectRunProfilesImportFromLocalFile,
   updateRunProfileRecord,
@@ -13,6 +14,7 @@ import {
 import {
   createRunProfile,
   deleteRunProfile,
+  executeRunProfileAction,
   importRunProfilesFromLocalPathAction,
   previewRunProfilesImportFromLocalPathAction,
   updateRunProfile,
@@ -22,6 +24,7 @@ vi.mock("@/services/run-profiles", () => ({
   createRunProfileRecord: vi.fn(),
   updateRunProfileRecord: vi.fn(),
   deleteRunProfileRecord: vi.fn(),
+  executeRunProfileCommand: vi.fn(),
   importProjectRunProfilesFromLocalFile: vi.fn(),
   previewProjectRunProfilesImportFromLocalFile: vi.fn(),
   RunProfileServiceError: class RunProfileServiceError extends Error {
@@ -225,6 +228,51 @@ describe("importRunProfilesFromLocalPathAction", () => {
     expect(result).toEqual({
       ok: true,
       message: "Run profiles loaded from local path",
+    });
+  });
+});
+
+describe("executeRunProfileAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns blocked when profile id is missing", async () => {
+    const result = await executeRunProfileAction("  ");
+
+    expect(result.status).toBe("blocked");
+    expect(executeRunProfileCommand).not.toHaveBeenCalled();
+  });
+
+  it("returns execution result from service", async () => {
+    vi.mocked(executeRunProfileCommand).mockResolvedValue({
+      status: "success",
+      exitCode: 0,
+      stdoutPreview: "done",
+      stderrPreview: "",
+      message: "Command finished with exit code 0.",
+    });
+
+    const result = await executeRunProfileAction("rp-1");
+
+    expect(executeRunProfileCommand).toHaveBeenCalledWith("rp-1");
+    expect(result.status).toBe("success");
+  });
+
+  it("maps RunProfileServiceError to blocked result", async () => {
+    const { RunProfileServiceError } = await import("@/services/run-profiles");
+    vi.mocked(executeRunProfileCommand).mockRejectedValue(
+      new RunProfileServiceError("RUN_PROFILE_NOT_FOUND", "Run profile not found"),
+    );
+
+    const result = await executeRunProfileAction("missing");
+
+    expect(result).toEqual({
+      status: "blocked",
+      exitCode: null,
+      stdoutPreview: "",
+      stderrPreview: "",
+      message: "Run profile not found",
     });
   });
 });

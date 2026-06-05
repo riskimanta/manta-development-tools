@@ -41,6 +41,12 @@ Control-plane dashboard for **projects** and **features**: register repos, captu
    pnpm db:seed
    ```
 
+## Optional run profile command execution
+
+Set **`MANDEV_ENABLE_COMMAND_EXECUTION=true`** in `.env` to show **Run** buttons for saved project run profiles. ManDev only executes stored `ProjectRunProfile` records (never free-form input), shows a confirmation dialog first, and is intended for **local development only**.
+
+**Warning:** Do not enable this if ManDev is exposed on a network. Command execution runs shell commands on the machine hosting the Next.js server.
+
 ## Optional password gate
 
 When **`MANDEV_PASSWORD`** is set in `.env`, all dashboard routes require a signed **HttpOnly** session cookie (JWT via [`jose`](https://github.com/panva/jose), 7-day expiry). You must also set **`MANDEV_AUTH_SECRET`** to a random string of **at least 16 characters**.

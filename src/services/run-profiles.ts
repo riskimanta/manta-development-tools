@@ -1,6 +1,14 @@
 import type { ProjectRunProfile } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import {
+  COMMAND_EXECUTION_DISABLED_MESSAGE,
+  isCommandExecutionEnabled,
+} from "@/lib/mandev-command-execution";
+import {
+  executeSavedRunProfileCommand,
+  type RunProfileExecutionResult,
+} from "@/lib/run-profile-execution";
 import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-import";
 import { resolveImportedRunProfileWorkingDirectory } from "@/lib/run-profile-working-directory";
 import { buildRunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
@@ -70,6 +78,44 @@ export function listRunProfilesByProjectId(projectId: string) {
 
 export function getRunProfileById(id: string) {
   return db.projectRunProfile.findUnique({ where: { id } });
+}
+
+export async function executeRunProfileCommand(
+  profileId: string,
+): Promise<RunProfileExecutionResult> {
+  if (!isCommandExecutionEnabled()) {
+    return {
+      status: "disabled",
+      exitCode: null,
+      stdoutPreview: "",
+      stderrPreview: "",
+      message: COMMAND_EXECUTION_DISABLED_MESSAGE,
+    };
+  }
+
+  const profile = await getRunProfileById(profileId);
+  if (!profile) {
+    throw new RunProfileServiceError(
+      "RUN_PROFILE_NOT_FOUND",
+      "Run profile not found",
+    );
+  }
+
+  if (!profile.workingDirectory?.trim()) {
+    return {
+      status: "blocked",
+      exitCode: null,
+      stdoutPreview: "",
+      stderrPreview: "",
+      message:
+        "Working directory is required before ManDev can run this profile.",
+    };
+  }
+
+  return executeSavedRunProfileCommand({
+    command: profile.command,
+    workingDirectory: profile.workingDirectory,
+  });
 }
 
 export async function createRunProfileRecord(
