@@ -29,6 +29,8 @@ import {
 import {
   buildRunProfileCdCommandCopy,
   buildRunProfileCommandCopy,
+  getRunProfileCopyPreview,
+  RUN_PROFILE_NO_WORKING_DIRECTORY_COPY_HINT,
 } from "@/lib/run-profile-copy";
 import { buildRunProfilesImportCursorPrompt } from "@/lib/run-profiles-import-template";
 
@@ -58,21 +60,23 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
+const previewCodeClassName =
+  "mt-0.5 block break-all rounded bg-muted/80 px-2 py-1 font-mono text-[11px] text-foreground/90";
+
 function RunProfileRow({
   profile,
   projectId,
-  projectLocalPath,
   onEdit,
 }: {
   profile: RunProfileListItem;
   projectId: string;
-  projectLocalPath: string | null;
   onEdit: (profile: RunProfileListItem) => void;
 }) {
   const copyInput = {
     command: profile.command,
     workingDirectory: profile.workingDirectory,
   };
+  const copyPreview = getRunProfileCopyPreview(copyInput);
 
   async function handleCopyCommand() {
     const text = buildRunProfileCommandCopy(copyInput);
@@ -130,36 +134,36 @@ function RunProfileRow({
         </div>
       </div>
 
-      <div className="space-y-2 text-xs">
+      {profile.description ? (
+        <p className="text-xs whitespace-pre-wrap text-muted-foreground">
+          {profile.description}
+        </p>
+      ) : null}
+
+      <div className="space-y-2 rounded-md border border-dashed border-border/70 bg-muted/10 p-2.5 text-xs">
+        <p className="text-[11px] font-medium text-muted-foreground">
+          Clipboard preview — copy only, not executed by ManDev
+        </p>
         <div>
-          <p className="font-medium text-muted-foreground">Command</p>
-          <code className="mt-1 block break-all rounded-md bg-muted px-2 py-1.5 font-mono text-[11px]">
-            {profile.command}
-          </code>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/90">
+            Copy command
+          </p>
+          <code className={previewCodeClassName}>{copyPreview.commandOnly}</code>
         </div>
         <div>
-          <p className="font-medium text-muted-foreground">Working directory</p>
-          {profile.workingDirectory ? (
-            <code className="mt-1 block break-all rounded-md bg-muted px-2 py-1.5 font-mono text-[11px]">
-              {profile.workingDirectory}
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/90">
+            Copy cd + command
+          </p>
+          {copyPreview.cdCommand.hasWorkingDirectory ? (
+            <code className={previewCodeClassName}>
+              {copyPreview.cdCommand.text}
             </code>
           ) : (
-            <p className="mt-1 text-muted-foreground">
-              Not set
-              {projectLocalPath
-                ? " — copy cd + command will use command only unless you set a directory."
-                : " — set a working directory or project local path for cd + command."}
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {RUN_PROFILE_NO_WORKING_DIRECTORY_COPY_HINT}
             </p>
           )}
         </div>
-        {profile.description ? (
-          <div>
-            <p className="font-medium text-muted-foreground">Description</p>
-            <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
-              {profile.description}
-            </p>
-          </div>
-        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -184,12 +188,6 @@ function RunProfileRow({
           Copy cd + command
         </Button>
       </div>
-      {!profile.workingDirectory ? (
-        <p className="text-[11px] text-muted-foreground">
-          No working directory on this profile. Copy cd + command copies the
-          command only.
-        </p>
-      ) : null}
     </li>
   );
 }
@@ -293,7 +291,6 @@ export function ProjectRunProfilesCard({
                 key={profile.id}
                 profile={profile}
                 projectId={projectId}
-                projectLocalPath={projectLocalPath}
                 onEdit={setEditingProfile}
               />
             ))}

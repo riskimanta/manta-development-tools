@@ -27,3 +27,20 @@ export function buildRunProfileCdCommandCopy(
     hasWorkingDirectory: true,
   };
 }
+
+export type RunProfileCopyPreview = {
+  commandOnly: string;
+  cdCommand: RunProfileCdCommandCopyResult;
+};
+
+export const RUN_PROFILE_NO_WORKING_DIRECTORY_COPY_HINT =
+  "No working directory set. Copy cd + command will copy the command only.";
+
+export function getRunProfileCopyPreview(
+  input: RunProfileCopyInput,
+): RunProfileCopyPreview {
+  return {
+    commandOnly: buildRunProfileCommandCopy(input),
+    cdCommand: buildRunProfileCdCommandCopy(input),
+  };
+}

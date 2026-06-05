@@ -4,96 +4,54 @@
 
 ManDev (`manta-development-tools`) is a local Next.js control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Data lives in SQLite via Prisma. Optional JWT session auth protects the app when `MANDEV_PASSWORD` is set.
 
-## Feature implemented
+## UX problem solved
 
-**Run Profiles Importer — Phase 1.5**
-
-ManDev can import run profiles from a target project’s `.mandev/run-profiles.json`, using the same workflow as architecture import: copy an AI prompt into Cursor, generate the file in the target repo, then read/import from the project’s configured `localPath`. Profiles are created or updated by name; nothing is deleted. ManDev still does not execute commands.
-
-## Safety boundary
-
-- **Import/copy only:** Read JSON from disk, validate, upsert profiles; copy AI prompt and run commands to clipboard.
-- **No execution:** No shell spawn, terminal UI, process manager, logs, stop/restart, or file upload in the browser.
-
-## File format (`.mandev/run-profiles.json`)
-
-```json
-{
-  "profiles": [
-    {
-      "name": "Dev Server",
-      "command": "pnpm dev",
-      "workingDirectory": ".",
-      "description": "Run the Next.js development server",
-      "isDefault": true
-    }
-  ]
-}
-```
-
-Validation: root `profiles` (non-empty array); each profile requires `name` and `command`; optional `workingDirectory`, `description`, `isDefault` (boolean). **At most one** profile may have `isDefault: true` — otherwise import fails with a clear validation error (safer than silently picking the first).
-
-## Import behavior
-
-| Rule | Behavior |
-|------|----------|
-| Match key | `projectId` + profile `name` (trimmed) |
-| New name | Create profile |
-| Existing name | Update command, working directory, description, `isDefault` |
-| Names not in file | Left unchanged (no delete) |
-| Default in file | If any imported profile has `isDefault: true`, all other defaults for the project are cleared first, then that profile is saved as default |
-
-## Working directory on import
-
-| Input | Stored value |
-|-------|----------------|
-| Missing / empty | Project `localPath` when set |
-| `"."` | Project `localPath` |
-| Relative path | Resolved with `path.resolve(localPath, relative)` |
-| Absolute path | Stored as-is |
-
-## UI changes
-
-On **Project Detail → Run profiles** card:
-
-- **Copy AI run profiles prompt** — Cursor instructions to inspect the repo and write `.mandev/run-profiles.json`
-- **Read run profiles from local path** — server action reads `<localPath>/.mandev/run-profiles.json`
-- Helper text: not a file upload; reads from configured local path
-- Toasts: `AI run profiles prompt copied` / `Run profiles loaded from local path`
-
-## Schema changed
-
-**No.** Phase 1 `ProjectRunProfile` model is unchanged; no new migration.
+Run profile cards showed the raw command and working directory separately, but users could not see the exact combined `cd + command` string before copying. That made **Copy cd + command** feel opaque and increased the risk of pasting the wrong thing into a terminal.
 
 ## Files changed
 
 | Area | Paths |
 |------|--------|
-| Validation | `src/lib/validations/run-profile-import.ts`, `.test.ts` |
-| Local reader | `src/lib/local-run-profiles-import.ts`, `.test.ts` |
-| AI prompt | `src/lib/run-profiles-import-template.ts`, `.test.ts` |
-| Service | `src/services/run-profiles.ts`, `.test.ts` |
-| Server Action | `src/app/projects/run-profiles/actions.ts`, `.test.ts` |
-| UI | `src/components/projects/project-run-profiles-card.tsx`, `project-run-profiles-import.tsx` |
-| Page | `src/app/(app)/projects/[id]/page.tsx` |
+| Copy/preview helpers | `src/lib/run-profile-copy.ts`, `src/lib/run-profile-copy.test.ts` |
+| UI | `src/components/projects/project-run-profiles-card.tsx` |
 | Report | `RESULT.md` |
+
+## UI changes implemented
+
+On each run profile card:
+
+- Added a compact **Clipboard preview** block (dashed border, muted background) labeled **copy only, not executed by ManDev**.
+- **Copy command** preview shows the exact trimmed string copied by **Copy command**.
+- **Copy cd + command** preview shows `cd "<workingDirectory>" && <command>` when a working directory is set — same format as clipboard copy.
+- When no working directory is set, shows: `No working directory set. Copy cd + command will copy the command only.`
+- Removed redundant separate command/working-directory blocks and duplicate footer hint to reduce clutter.
+- Profile description (when present) remains above the preview.
+- **Copy command** and **Copy cd + command** buttons and clipboard behavior are unchanged.
+
+## Copy-only — no execution
+
+**Confirmed.** This change is preview-only UI. ManDev still does not spawn shells, run commands, or add terminal/process UI. Clipboard copy helpers and button handlers are unchanged.
+
+## Schema changed
+
+**No.** `ProjectRunProfile` and migrations are unchanged.
 
 ## Test / lint / typecheck status
 
 | Check | Status |
 |-------|--------|
-| `pnpm test` | 231 passed (34 files) |
+| `pnpm test` | 233 passed (34 files) |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
+New coverage: `getRunProfileCopyPreview` and `RUN_PROFILE_NO_WORKING_DIRECTORY_COPY_HINT` in `run-profile-copy.test.ts`.
+
 ## Known limitations
 
-- Import requires project `localPath`; no upload fallback.
-- Profiles not listed in the JSON file are never removed automatically.
-- Only one `isDefault: true` per import file; fix the JSON and re-import if Cursor marks multiple defaults.
-- Imported working directories are not re-resolved when `localPath` changes later (same as manual profiles).
-- No Phase 2 command execution or Phase 3 process/logs UI.
+- Preview reflects stored profile fields only; it does not infer a working directory from project `localPath` when the profile field is empty (same as copy behavior).
+- Long commands/paths wrap in the preview block but may still be hard to scan on very narrow viewports.
+- No Phase 2 run-from-UI, process manager, logs, or stop/restart.
 
 ## Recommended next step
 
-Manually verify on a project with `localPath`: copy AI prompt → generate `.mandev/run-profiles.json` in the target repo → import → confirm create/update by name and a single default badge. Optional **Phase 2:** run command from UI with explicit confirmation and cwd guardrails.
+Manually verify on a project detail page: confirm both preview lines match what lands on the clipboard for profiles with and without a working directory. Optional **Phase 2:** explicit run-from-UI with confirmation and cwd guardrails.
