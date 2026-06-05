@@ -4,33 +4,50 @@
 
 ManDev (`manta-development-tools`) is a local Next.js control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Data lives in SQLite via Prisma. Optional JWT session auth protects the app when `MANDEV_PASSWORD` is set.
 
+## Feature implemented
+
+**Run Profiles Import Preview — Phase 1.6**
+
+Reading `.mandev/run-profiles.json` now opens a preview dialog before any database write. Users see what will be created, updated, left unchanged, or kept, plus default-profile impact, then confirm or cancel.
+
 ## UX problem solved
 
-Run profile cards showed the raw command and working directory separately, but users could not see the exact combined `cd + command` string before copying. That made **Copy cd + command** feel opaque and increased the risk of pasting the wrong thing into a terminal.
+**Read run profiles from local path** previously upserted profiles immediately. Users had no visibility into create vs update vs unchanged vs kept profiles, or whether the default would change, before committing the import.
+
+## Safety boundary
+
+- **Preview/import only:** Read JSON from disk, validate, compare, preview, then upsert on explicit confirm.
+- **No execution:** No shell spawn, terminal UI, process manager, logs, stop/restart, or run buttons.
+
+## Preview behavior
+
+1. User clicks **Read run profiles from local path** (unchanged label).
+2. Server reads and validates `<localPath>/.mandev/run-profiles.json` (same Phase 1.5 validation/errors).
+3. `buildRunProfilesImportPreview` compares imported vs existing profiles:
+   - **create** — trimmed name not in project
+   - **update** — same name, at least one normalized field differs (`command`, `workingDirectory`, `description`, `isDefault`)
+   - **unchanged** — same name, all normalized fields match
+   - **kept** — existing profile not in file (not deleted)
+4. Working directory resolution matches import: missing/empty → `localPath`, `"."` → `localPath`, relative → resolved, absolute → as-is.
+5. Default impact: current default name, next default name after import, and whether default will change (including import-file default clearing behavior).
+6. Preview dialog shows counts, name lists, default summary, and: *Import will create or update profiles by name. Profiles not listed in the file will be kept.*
+
+## Confirm import behavior
+
+- **Cancel** closes the dialog; no database write.
+- **Confirm import** runs existing `importProjectRunProfilesFromLocalFile` (create/update by name, no delete, same default handling).
+- Page revalidates and success toast on confirm only.
 
 ## Files changed
 
 | Area | Paths |
 |------|--------|
-| Copy/preview helpers | `src/lib/run-profile-copy.ts`, `src/lib/run-profile-copy.test.ts` |
-| UI | `src/components/projects/project-run-profiles-card.tsx` |
+| Preview helper | `src/lib/run-profiles-import-preview.ts`, `.test.ts` |
+| Working directory (shared) | `src/lib/run-profile-working-directory.ts`, `.test.ts` |
+| Service | `src/services/run-profiles.ts`, `.test.ts` |
+| Server Actions | `src/app/projects/run-profiles/actions.ts`, `.test.ts` |
+| UI | `src/components/projects/project-run-profiles-import.tsx` |
 | Report | `RESULT.md` |
-
-## UI changes implemented
-
-On each run profile card:
-
-- Added a compact **Clipboard preview** block (dashed border, muted background) labeled **copy only, not executed by ManDev**.
-- **Copy command** preview shows the exact trimmed string copied by **Copy command**.
-- **Copy cd + command** preview shows `cd "<workingDirectory>" && <command>` when a working directory is set — same format as clipboard copy.
-- When no working directory is set, shows: `No working directory set. Copy cd + command will copy the command only.`
-- Removed redundant separate command/working-directory blocks and duplicate footer hint to reduce clutter.
-- Profile description (when present) remains above the preview.
-- **Copy command** and **Copy cd + command** buttons and clipboard behavior are unchanged.
-
-## Copy-only — no execution
-
-**Confirmed.** This change is preview-only UI. ManDev still does not spawn shells, run commands, or add terminal/process UI. Clipboard copy helpers and button handlers are unchanged.
 
 ## Schema changed
 
@@ -40,18 +57,18 @@ On each run profile card:
 
 | Check | Status |
 |-------|--------|
-| `pnpm test` | 233 passed (34 files) |
+| `pnpm test` | 248 passed (36 files) |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
-New coverage: `getRunProfileCopyPreview` and `RUN_PROFILE_NO_WORKING_DIRECTORY_COPY_HINT` in `run-profile-copy.test.ts`.
-
 ## Known limitations
 
-- Preview reflects stored profile fields only; it does not infer a working directory from project `localPath` when the profile field is empty (same as copy behavior).
-- Long commands/paths wrap in the preview block but may still be hard to scan on very narrow viewports.
-- No Phase 2 run-from-UI, process manager, logs, or stop/restart.
+- Preview re-reads the file on confirm (file could change between preview and confirm).
+- Preview lists profile names only; field-level diffs are summarized via update count, not per-field before/after.
+- Import still requires project `localPath`; no upload fallback.
+- Profiles not in the JSON file are never removed automatically.
+- No Phase 2 command execution or Phase 3 process/logs UI.
 
 ## Recommended next step
 
-Manually verify on a project detail page: confirm both preview lines match what lands on the clipboard for profiles with and without a working directory. Optional **Phase 2:** explicit run-from-UI with confirmation and cwd guardrails.
+Manually verify on a project with `localPath` and mixed existing/imported profiles: read → review preview sections → cancel (no DB change) → read again → confirm import → verify create/update/kept/default badge. Optional: cache validated import payload between preview and confirm to avoid a second disk read.

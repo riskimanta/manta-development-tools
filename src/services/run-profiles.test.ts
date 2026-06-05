@@ -7,7 +7,7 @@ import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-imp
 import {
   createRunProfileRecord,
   importProjectRunProfilesFromLocalFile,
-  resolveImportedRunProfileWorkingDirectory,
+  previewProjectRunProfilesImportFromLocalFile,
   resolveRunProfileWorkingDirectory,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
@@ -43,35 +43,6 @@ const mockProfile = {
   createdAt: new Date(),
   updatedAt: new Date(),
 };
-
-describe("resolveImportedRunProfileWorkingDirectory", () => {
-  it('maps "." to project local path', () => {
-    expect(
-      resolveImportedRunProfileWorkingDirectory(".", "/Users/dev/app"),
-    ).toBe("/Users/dev/app");
-  });
-
-  it("resolves relative paths against project local path", () => {
-    expect(
-      resolveImportedRunProfileWorkingDirectory("apps/web", "/Users/dev/app"),
-    ).toBe("/Users/dev/app/apps/web");
-  });
-
-  it("keeps absolute paths as-is", () => {
-    expect(
-      resolveImportedRunProfileWorkingDirectory(
-        "/opt/run",
-        "/Users/dev/app",
-      ),
-    ).toBe("/opt/run");
-  });
-
-  it("falls back to local path when working directory is missing", () => {
-    expect(
-      resolveImportedRunProfileWorkingDirectory(null, "/Users/dev/app"),
-    ).toBe("/Users/dev/app");
-  });
-});
 
 describe("resolveRunProfileWorkingDirectory", () => {
   it("uses explicit working directory when provided", () => {
@@ -159,6 +130,112 @@ describe("createRunProfileRecord", () => {
         isDefault: true,
       },
     });
+  });
+});
+
+describe("previewProjectRunProfilesImportFromLocalFile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("throws when project is not found", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue(null);
+
+    await expect(
+      previewProjectRunProfilesImportFromLocalFile("missing"),
+    ).rejects.toMatchObject({ code: "PROJECT_NOT_FOUND" });
+  });
+
+  it("throws when local path is missing", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      localPath: null,
+    } as never);
+
+    await expect(
+      previewProjectRunProfilesImportFromLocalFile("proj-1"),
+    ).rejects.toMatchObject({ code: "LOCAL_PATH_MISSING" });
+  });
+
+  it("throws validation errors from import file read", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      localPath: "/Users/dev/app",
+    } as never);
+    vi.mocked(readRunProfilesImportFromLocalPath).mockResolvedValue({
+      ok: false,
+      code: "VALIDATION_FAILED",
+      message:
+        "Only one profile may have isDefault: true in the import file",
+    });
+
+    await expect(
+      previewProjectRunProfilesImportFromLocalFile("proj-1"),
+    ).rejects.toMatchObject({
+      code: "VALIDATION_FAILED",
+      message: expect.stringContaining("isDefault"),
+    });
+    expect(db.projectRunProfile.findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns import preview without writing profiles", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      localPath: "/Users/dev/app",
+    } as never);
+    vi.mocked(readRunProfilesImportFromLocalPath).mockResolvedValue({
+      ok: true,
+      data: {
+        profiles: [
+          {
+            name: "Dev",
+            command: "pnpm dev",
+            workingDirectory: ".",
+            description: null,
+            isDefault: true,
+          },
+          {
+            name: "Build",
+            command: "pnpm build",
+            workingDirectory: null,
+            description: null,
+            isDefault: false,
+          },
+        ],
+      },
+    });
+    vi.mocked(db.projectRunProfile.findMany).mockResolvedValue([
+      {
+        ...mockProfile,
+        name: "Dev",
+        command: "pnpm start",
+      },
+      {
+        ...mockProfile,
+        id: "rp-2",
+        name: "Legacy",
+        command: "npm start",
+        isDefault: false,
+      },
+    ]);
+
+    const preview = await previewProjectRunProfilesImportFromLocalFile("proj-1");
+
+    expect(readRunProfilesImportFromLocalPath).toHaveBeenCalledWith(
+      "/Users/dev/app",
+    );
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(preview.totalInFile).toBe(2);
+    expect(preview.create).toEqual([
+      expect.objectContaining({ name: "Build" }),
+    ]);
+    expect(preview.update).toEqual([
+      expect.objectContaining({
+        name: "Dev",
+        changes: ["command"],
+      }),
+    ]);
+    expect(preview.kept).toEqual([{ name: "Legacy", isDefault: false }]);
   });
 });
 

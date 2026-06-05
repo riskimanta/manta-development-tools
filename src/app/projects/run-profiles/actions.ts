@@ -7,10 +7,12 @@ import {
   runProfileUpdateSchema,
 } from "@/lib/validations/run-profile";
 import { getProjectById } from "@/services/projects";
+import type { RunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
 import {
   createRunProfileRecord,
   deleteRunProfileRecord,
   importProjectRunProfilesFromLocalFile,
+  previewProjectRunProfilesImportFromLocalFile,
   RunProfileImportServiceError,
   RunProfileServiceError,
   updateRunProfileRecord,
@@ -113,6 +115,30 @@ export async function deleteRunProfile(formData: FormData): Promise<void> {
 
   if (typeof projectId === "string" && projectId) {
     revalidatePath(`/projects/${projectId}`);
+  }
+}
+
+export type RunProfileImportPreviewActionResult =
+  | { ok: true; preview: RunProfilesImportPreview }
+  | { ok: false; message: string };
+
+export async function previewRunProfilesImportFromLocalPathAction(
+  projectId: string,
+): Promise<RunProfileImportPreviewActionResult> {
+  if (!projectId.trim()) {
+    return { ok: false, message: "Project is required" };
+  }
+
+  try {
+    const preview = await previewProjectRunProfilesImportFromLocalFile(
+      projectId.trim(),
+    );
+    return { ok: true, preview };
+  } catch (e) {
+    if (e instanceof RunProfileImportServiceError) {
+      return { ok: false, message: e.message };
+    }
+    throw e;
   }
 }
 

@@ -6,6 +6,7 @@ import {
   createRunProfileRecord,
   deleteRunProfileRecord,
   importProjectRunProfilesFromLocalFile,
+  previewProjectRunProfilesImportFromLocalFile,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
 
@@ -13,6 +14,7 @@ import {
   createRunProfile,
   deleteRunProfile,
   importRunProfilesFromLocalPathAction,
+  previewRunProfilesImportFromLocalPathAction,
   updateRunProfile,
 } from "./actions";
 
@@ -21,6 +23,7 @@ vi.mock("@/services/run-profiles", () => ({
   updateRunProfileRecord: vi.fn(),
   deleteRunProfileRecord: vi.fn(),
   importProjectRunProfilesFromLocalFile: vi.fn(),
+  previewProjectRunProfilesImportFromLocalFile: vi.fn(),
   RunProfileServiceError: class RunProfileServiceError extends Error {
     code: string;
     constructor(code: string, message: string) {
@@ -136,6 +139,51 @@ describe("updateRunProfile", () => {
     expect(updateRunProfileRecord).toHaveBeenCalled();
     expect(revalidatePath).toHaveBeenCalledWith("/projects/proj-1");
     expect(result).toEqual({ ok: true, message: "Run profile updated" });
+  });
+});
+
+describe("previewRunProfilesImportFromLocalPathAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns error when project id is missing", async () => {
+    const result = await previewRunProfilesImportFromLocalPathAction("  ");
+
+    expect(result).toEqual({ ok: false, message: "Project is required" });
+    expect(previewProjectRunProfilesImportFromLocalFile).not.toHaveBeenCalled();
+  });
+
+  it("returns preview data without importing", async () => {
+    vi.mocked(previewProjectRunProfilesImportFromLocalFile).mockResolvedValue({
+      totalInFile: 1,
+      create: [
+        {
+          name: "Build",
+          command: "pnpm build",
+          workingDirectory: "/Users/dev/app",
+          description: null,
+          isDefault: false,
+        },
+      ],
+      update: [],
+      unchanged: [],
+      kept: [],
+      currentDefaultName: null,
+      nextDefaultName: null,
+      defaultWillChange: false,
+    });
+
+    const result = await previewRunProfilesImportFromLocalPathAction("proj-1");
+
+    expect(previewProjectRunProfilesImportFromLocalFile).toHaveBeenCalledWith(
+      "proj-1",
+    );
+    expect(importProjectRunProfilesFromLocalFile).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.preview.create).toHaveLength(1);
+    }
   });
 });
 

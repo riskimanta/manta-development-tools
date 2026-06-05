@@ -1,9 +1,10 @@
-import path from "node:path";
-
 import type { ProjectRunProfile } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-import";
+import { resolveImportedRunProfileWorkingDirectory } from "@/lib/run-profile-working-directory";
+import { buildRunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
+import type { RunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
 import type { NormalizedRunProfileImportEntry } from "@/lib/validations/run-profile-import";
 import type {
   RunProfileCreateInput,
@@ -58,31 +59,7 @@ export function resolveRunProfileWorkingDirectory(
   return localPath || null;
 }
 
-export function resolveImportedRunProfileWorkingDirectory(
-  workingDirectory: string | null | undefined,
-  projectLocalPath: string | null | undefined,
-): string | null {
-  const localPath = projectLocalPath?.trim();
-  const trimmed = workingDirectory?.trim();
-
-  if (!trimmed) {
-    return localPath || null;
-  }
-
-  if (trimmed === ".") {
-    return localPath || null;
-  }
-
-  if (path.isAbsolute(trimmed)) {
-    return trimmed;
-  }
-
-  if (localPath) {
-    return path.resolve(localPath, trimmed);
-  }
-
-  return trimmed;
-}
+export { resolveImportedRunProfileWorkingDirectory } from "@/lib/run-profile-working-directory";
 
 export function listRunProfilesByProjectId(projectId: string) {
   return db.projectRunProfile.findMany({
@@ -195,6 +172,49 @@ function findExistingProfileByName(
 ): ProjectRunProfile | undefined {
   const normalized = name.trim();
   return existing.find((p) => p.name.trim() === normalized);
+}
+
+export async function previewProjectRunProfilesImportFromLocalFile(
+  projectId: string,
+): Promise<RunProfilesImportPreview> {
+  const project = await db.project.findUnique({ where: { id: projectId } });
+
+  if (!project) {
+    throw new RunProfileImportServiceError(
+      "PROJECT_NOT_FOUND",
+      "Project not found",
+    );
+  }
+
+  const localPath = project.localPath?.trim();
+  if (!localPath) {
+    throw new RunProfileImportServiceError(
+      "LOCAL_PATH_MISSING",
+      "Set a local path on this project first, then read run profiles from that path on disk.",
+    );
+  }
+
+  const readResult = await readRunProfilesImportFromLocalPath(localPath);
+  if (!readResult.ok) {
+    throw new RunProfileImportServiceError(
+      readResult.code,
+      readResult.message,
+    );
+  }
+
+  const existing = await listRunProfilesByProjectId(projectId);
+
+  return buildRunProfilesImportPreview({
+    existing: existing.map((profile) => ({
+      name: profile.name,
+      command: profile.command,
+      workingDirectory: profile.workingDirectory,
+      description: profile.description,
+      isDefault: profile.isDefault,
+    })),
+    imported: readResult.data.profiles,
+    projectLocalPath: localPath,
+  });
 }
 
 export async function importProjectRunProfilesFromLocalFile(
