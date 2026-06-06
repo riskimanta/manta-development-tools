@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/lib/db";
@@ -5,13 +6,19 @@ import { db } from "@/lib/db";
 import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-import";
 
 import * as runProfileExecution from "@/lib/run-profile-execution";
+import { runProfileProcessManager } from "@/lib/run-profile-process-manager";
 
 import {
   createRunProfileRecord,
   executeRunProfileCommand,
+  getManagedRunProfileSnapshot,
   importProjectRunProfilesFromLocalFile,
+  listManagedRunProfileSnapshots,
   previewProjectRunProfilesImportFromLocalFile,
   resolveRunProfileWorkingDirectory,
+  restartManagedRunProfile,
+  startManagedRunProfile,
+  stopManagedRunProfile,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
 
@@ -49,6 +56,23 @@ vi.mock("@/lib/db", () => ({
       update: vi.fn(),
     },
     $transaction: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/run-profile-process-manager", () => ({
+  runProfileProcessManager: {
+    start: vi.fn(),
+    stop: vi.fn(),
+    restart: vi.fn(),
+    getSnapshot: vi.fn(),
+    listSnapshots: vi.fn(),
+  },
+}));
+
+vi.mock("node:fs", () => ({
+  default: {
+    existsSync: vi.fn(),
+    statSync: vi.fn(),
   },
 }));
 
@@ -473,6 +497,292 @@ describe("executeRunProfileCommand", () => {
 
     await expect(executeRunProfileCommand("missing")).rejects.toMatchObject({
       code: "RUN_PROFILE_NOT_FOUND",
+    });
+  });
+
+  it("still blocks long-running commands on the Phase 2A path", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(mockProfile);
+
+    const actual = await vi.importActual<typeof runProfileExecution>(
+      "@/lib/run-profile-execution",
+    );
+    vi.mocked(executeSavedRunProfileCommand).mockImplementation((profile) =>
+      actual.executeSavedRunProfileCommand(profile, {
+        fsAccess: {
+          exists: () => true,
+          isDirectory: () => true,
+        },
+      }),
+    );
+
+    const result = await executeRunProfileCommand("rp-1");
+
+    expect(result.status).toBe("blocked");
+    expect(result.message).toMatch(/long-running/i);
+  });
+});
+
+const managedSnapshot = {
+  runProfileId: "rp-1",
+  status: "starting" as const,
+  pid: null,
+  command: "pnpm dev",
+  workingDirectory: "/Users/dev/app",
+  startedAt: "2026-01-01T00:00:00.000Z",
+  stoppedAt: null,
+  exitedAt: null,
+  exitCode: null,
+  signal: null,
+  message: "Process is starting.",
+  logs: {
+    stdout: "",
+    stderr: "",
+    stdoutTruncated: false,
+    stderrTruncated: false,
+  },
+};
+
+function mockValidWorkingDirectory() {
+  vi.mocked(fs.existsSync).mockReturnValue(true);
+  vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as never);
+}
+
+describe("startManagedRunProfile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockValidWorkingDirectory();
+  });
+
+  it("returns disabled when command execution env flag is off", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(false);
+
+    const result = await startManagedRunProfile("rp-1");
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "disabled",
+    });
+    expect(db.projectRunProfile.findUnique).not.toHaveBeenCalled();
+    expect(runProfileProcessManager.start).not.toHaveBeenCalled();
+  });
+
+  it("returns not_found when profile does not exist", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(null);
+
+    const result = await startManagedRunProfile("missing");
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "not_found",
+      message: "Run profile not found",
+    });
+    expect(runProfileProcessManager.start).not.toHaveBeenCalled();
+  });
+
+  it("returns missing_working_directory when profile cwd is empty", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue({
+      ...mockProfile,
+      workingDirectory: null,
+    });
+
+    const result = await startManagedRunProfile("rp-1");
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "missing_working_directory",
+    });
+    expect(runProfileProcessManager.start).not.toHaveBeenCalled();
+  });
+
+  it("returns invalid_working_directory when cwd does not exist", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(mockProfile);
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+
+    const result = await startManagedRunProfile("rp-1");
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "invalid_working_directory",
+    });
+    expect(runProfileProcessManager.start).not.toHaveBeenCalled();
+  });
+
+  it("returns not_directory when cwd is not a directory", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(mockProfile);
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => false } as never);
+
+    const result = await startManagedRunProfile("rp-1");
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "not_directory",
+    });
+    expect(runProfileProcessManager.start).not.toHaveBeenCalled();
+  });
+
+  it("returns invalid_command when profile command is empty", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue({
+      ...mockProfile,
+      command: "   ",
+    });
+
+    const result = await startManagedRunProfile("rp-1");
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "invalid_command",
+    });
+    expect(runProfileProcessManager.start).not.toHaveBeenCalled();
+  });
+
+  it("starts managed process using saved profile command and cwd", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(mockProfile);
+    vi.mocked(runProfileProcessManager.start).mockReturnValue(managedSnapshot);
+
+    const result = await startManagedRunProfile("rp-1");
+
+    expect(runProfileProcessManager.start).toHaveBeenCalledWith({
+      runProfileId: "rp-1",
+      command: "pnpm dev",
+      workingDirectory: "/Users/dev/app",
+    });
+    expect(result).toEqual({
+      ok: true,
+      snapshot: managedSnapshot,
+      message: "Process is starting.",
+    });
+  });
+});
+
+describe("stopManagedRunProfile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns disabled when command execution env flag is off", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(false);
+
+    const result = await stopManagedRunProfile("rp-1");
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "disabled",
+    });
+    expect(runProfileProcessManager.stop).not.toHaveBeenCalled();
+  });
+
+  it("returns manager_error when no managed process exists", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(runProfileProcessManager.stop).mockReturnValue(null);
+
+    const result = await stopManagedRunProfile("rp-unknown");
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "manager_error",
+      message: "No managed process found for this run profile.",
+    });
+  });
+
+  it("returns snapshot when stop succeeds", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(runProfileProcessManager.stop).mockReturnValue({
+      ...managedSnapshot,
+      status: "stopping",
+      message: "Stop requested; sending SIGTERM.",
+    });
+
+    const result = await stopManagedRunProfile("rp-1");
+
+    expect(runProfileProcessManager.stop).toHaveBeenCalledWith("rp-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.snapshot?.status).toBe("stopping");
+    }
+  });
+});
+
+describe("restartManagedRunProfile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockValidWorkingDirectory();
+  });
+
+  it("restarts managed process using saved profile command and cwd", async () => {
+    vi.mocked(isCommandExecutionEnabled).mockReturnValue(true);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(mockProfile);
+    vi.mocked(runProfileProcessManager.restart).mockReturnValue(managedSnapshot);
+
+    const result = await restartManagedRunProfile("rp-1");
+
+    expect(runProfileProcessManager.restart).toHaveBeenCalledWith({
+      runProfileId: "rp-1",
+      command: "pnpm dev",
+      workingDirectory: "/Users/dev/app",
+    });
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("getManagedRunProfileSnapshot", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns manager snapshot when process exists", () => {
+    vi.mocked(runProfileProcessManager.getSnapshot).mockReturnValue(
+      managedSnapshot,
+    );
+
+    const result = getManagedRunProfileSnapshot("rp-1");
+
+    expect(runProfileProcessManager.getSnapshot).toHaveBeenCalledWith("rp-1");
+    expect(result).toEqual({
+      ok: true,
+      snapshot: managedSnapshot,
+      message: "Process is starting.",
+    });
+  });
+
+  it("returns null snapshot when process is not registered", () => {
+    vi.mocked(runProfileProcessManager.getSnapshot).mockReturnValue(null);
+
+    const result = getManagedRunProfileSnapshot("rp-missing");
+
+    expect(result).toEqual({
+      ok: true,
+      snapshot: null,
+      message: "No managed process for this run profile.",
+    });
+  });
+});
+
+describe("listManagedRunProfileSnapshots", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns all manager snapshots", () => {
+    vi.mocked(runProfileProcessManager.listSnapshots).mockReturnValue([
+      managedSnapshot,
+    ]);
+
+    const result = listManagedRunProfileSnapshots();
+
+    expect(runProfileProcessManager.listSnapshots).toHaveBeenCalled();
+    expect(result).toEqual({
+      ok: true,
+      snapshot: null,
+      snapshots: [managedSnapshot],
+      message: "Found 1 managed process(es).",
     });
   });
 });

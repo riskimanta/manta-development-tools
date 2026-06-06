@@ -6,8 +6,13 @@ import {
   createRunProfileRecord,
   deleteRunProfileRecord,
   executeRunProfileCommand,
+  getManagedRunProfileSnapshot,
   importProjectRunProfilesFromLocalFile,
+  listManagedRunProfileSnapshots,
   previewProjectRunProfilesImportFromLocalFile,
+  restartManagedRunProfile,
+  startManagedRunProfile,
+  stopManagedRunProfile,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
 
@@ -15,8 +20,13 @@ import {
   createRunProfile,
   deleteRunProfile,
   executeRunProfileAction,
+  getManagedRunProfileSnapshotAction,
   importRunProfilesFromLocalPathAction,
+  listManagedRunProfileSnapshotsAction,
   previewRunProfilesImportFromLocalPathAction,
+  restartManagedRunProfileAction,
+  startManagedRunProfileAction,
+  stopManagedRunProfileAction,
   updateRunProfile,
 } from "./actions";
 
@@ -25,6 +35,11 @@ vi.mock("@/services/run-profiles", () => ({
   updateRunProfileRecord: vi.fn(),
   deleteRunProfileRecord: vi.fn(),
   executeRunProfileCommand: vi.fn(),
+  startManagedRunProfile: vi.fn(),
+  stopManagedRunProfile: vi.fn(),
+  restartManagedRunProfile: vi.fn(),
+  getManagedRunProfileSnapshot: vi.fn(),
+  listManagedRunProfileSnapshots: vi.fn(),
   importProjectRunProfilesFromLocalFile: vi.fn(),
   previewProjectRunProfilesImportFromLocalFile: vi.fn(),
   RunProfileServiceError: class RunProfileServiceError extends Error {
@@ -274,6 +289,147 @@ describe("executeRunProfileAction", () => {
       stderrPreview: "",
       message: "Run profile not found",
     });
+  });
+});
+
+const managedSnapshot = {
+  runProfileId: "rp-1",
+  status: "running" as const,
+  pid: 1234,
+  command: "pnpm dev",
+  workingDirectory: "/Users/dev/app",
+  startedAt: "2026-01-01T00:00:00.000Z",
+  stoppedAt: null,
+  exitedAt: null,
+  exitCode: null,
+  signal: null,
+  message: "Process is running.",
+  logs: {
+    stdout: "ready",
+    stderr: "",
+    stdoutTruncated: false,
+    stderrTruncated: false,
+  },
+};
+
+describe("startManagedRunProfileAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns not_found when profile id is missing", async () => {
+    const result = await startManagedRunProfileAction("  ");
+
+    expect(result).toEqual({
+      ok: false,
+      snapshot: null,
+      message: "Run profile is required.",
+      reason: "not_found",
+    });
+    expect(startManagedRunProfile).not.toHaveBeenCalled();
+  });
+
+  it("delegates to service and returns result", async () => {
+    vi.mocked(startManagedRunProfile).mockResolvedValue({
+      ok: true,
+      snapshot: managedSnapshot,
+      message: "Process is running.",
+    });
+
+    const result = await startManagedRunProfileAction("rp-1");
+
+    expect(startManagedRunProfile).toHaveBeenCalledWith("rp-1");
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("stopManagedRunProfileAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns not_found when profile id is missing", async () => {
+    const result = await stopManagedRunProfileAction("");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("not_found");
+    }
+    expect(stopManagedRunProfile).not.toHaveBeenCalled();
+  });
+
+  it("delegates to service and returns result", async () => {
+    vi.mocked(stopManagedRunProfile).mockResolvedValue({
+      ok: true,
+      snapshot: managedSnapshot,
+      message: "Process is running.",
+    });
+
+    const result = await stopManagedRunProfileAction("rp-1");
+
+    expect(stopManagedRunProfile).toHaveBeenCalledWith("rp-1");
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("restartManagedRunProfileAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("delegates to service and returns result", async () => {
+    vi.mocked(restartManagedRunProfile).mockResolvedValue({
+      ok: true,
+      snapshot: managedSnapshot,
+      message: "Process is starting.",
+    });
+
+    const result = await restartManagedRunProfileAction("rp-1");
+
+    expect(restartManagedRunProfile).toHaveBeenCalledWith("rp-1");
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("getManagedRunProfileSnapshotAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("delegates to service and returns snapshot", async () => {
+    vi.mocked(getManagedRunProfileSnapshot).mockReturnValue({
+      ok: true,
+      snapshot: managedSnapshot,
+      message: "Process is running.",
+    });
+
+    const result = await getManagedRunProfileSnapshotAction("rp-1");
+
+    expect(getManagedRunProfileSnapshot).toHaveBeenCalledWith("rp-1");
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("listManagedRunProfileSnapshotsAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("delegates to service and returns snapshots", async () => {
+    vi.mocked(listManagedRunProfileSnapshots).mockReturnValue({
+      ok: true,
+      snapshot: null,
+      snapshots: [managedSnapshot],
+      message: "Found 1 managed process(es).",
+    });
+
+    const result = await listManagedRunProfileSnapshotsAction();
+
+    expect(listManagedRunProfileSnapshots).toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.snapshots).toHaveLength(1);
+    }
   });
 });
 

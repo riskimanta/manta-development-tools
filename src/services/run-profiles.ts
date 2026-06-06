@@ -1,4 +1,5 @@
 import type { ProjectRunProfile } from "@prisma/client";
+import fs from "node:fs";
 
 import { db } from "@/lib/db";
 import {
@@ -7,8 +8,13 @@ import {
 } from "@/lib/mandev-command-execution";
 import {
   executeSavedRunProfileCommand,
+  validateRunProfileExecutionTarget,
   type RunProfileExecutionResult,
 } from "@/lib/run-profile-execution";
+import {
+  runProfileProcessManager,
+  type RunProfileManagedProcessSnapshot,
+} from "@/lib/run-profile-process-manager";
 import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-import";
 import { resolveImportedRunProfileWorkingDirectory } from "@/lib/run-profile-working-directory";
 import { buildRunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
@@ -55,6 +61,102 @@ export type RunProfileImportResult = {
   created: number;
   updated: number;
 };
+
+export type ManagedRunProfileActionFailureReason =
+  | "disabled"
+  | "not_found"
+  | "invalid_command"
+  | "missing_working_directory"
+  | "invalid_working_directory"
+  | "not_directory"
+  | "manager_error";
+
+export type ManagedRunProfileActionResult =
+  | {
+      ok: true;
+      snapshot: RunProfileManagedProcessSnapshot | null;
+      snapshots?: RunProfileManagedProcessSnapshot[];
+      message: string;
+    }
+  | {
+      ok: false;
+      snapshot?: RunProfileManagedProcessSnapshot | null;
+      snapshots?: RunProfileManagedProcessSnapshot[];
+      message: string;
+      reason: ManagedRunProfileActionFailureReason;
+    };
+
+type RunProfileFsAccess = {
+  exists: (path: string) => boolean;
+  isDirectory: (path: string) => boolean;
+};
+
+function defaultRunProfileFsAccess(): RunProfileFsAccess {
+  return {
+    exists: (targetPath) => fs.existsSync(targetPath),
+    isDirectory: (targetPath) => {
+      try {
+        return fs.statSync(targetPath).isDirectory();
+      } catch {
+        return false;
+      }
+    },
+  };
+}
+
+function validationFailureToManagedResult(
+  validation: RunProfileExecutionResult,
+  profile: { command: string; workingDirectory: string | null },
+  fsAccess: RunProfileFsAccess,
+): ManagedRunProfileActionResult {
+  const command = profile.command.trim();
+  const workingDirectory = profile.workingDirectory?.trim();
+
+  let reason: ManagedRunProfileActionFailureReason;
+  if (!command) {
+    reason = "invalid_command";
+  } else if (!workingDirectory) {
+    reason = "missing_working_directory";
+  } else if (!fsAccess.exists(workingDirectory)) {
+    reason = "invalid_working_directory";
+  } else {
+    reason = "not_directory";
+  }
+
+  return {
+    ok: false,
+    snapshot: null,
+    message: validation.message,
+    reason,
+  };
+}
+
+function validateSavedProfileForManagedExecution(
+  profile: ProjectRunProfile,
+  fsAccess: RunProfileFsAccess = defaultRunProfileFsAccess(),
+): ManagedRunProfileActionResult | null {
+  const validation = validateRunProfileExecutionTarget({
+    command: profile.command,
+    workingDirectory: profile.workingDirectory,
+    exists: fsAccess.exists,
+    isDirectory: fsAccess.isDirectory,
+  });
+
+  if (!validation) {
+    return null;
+  }
+
+  return validationFailureToManagedResult(validation, profile, fsAccess);
+}
+
+function disabledManagedResult(): ManagedRunProfileActionResult {
+  return {
+    ok: false,
+    snapshot: null,
+    message: COMMAND_EXECUTION_DISABLED_MESSAGE,
+    reason: "disabled",
+  };
+}
 
 export function resolveRunProfileWorkingDirectory(
   workingDirectory: string | null | undefined,
@@ -116,6 +218,128 @@ export async function executeRunProfileCommand(
     command: profile.command,
     workingDirectory: profile.workingDirectory,
   });
+}
+
+export async function startManagedRunProfile(
+  runProfileId: string,
+): Promise<ManagedRunProfileActionResult> {
+  if (!isCommandExecutionEnabled()) {
+    return disabledManagedResult();
+  }
+
+  const profile = await getRunProfileById(runProfileId);
+  if (!profile) {
+    return {
+      ok: false,
+      snapshot: null,
+      message: "Run profile not found",
+      reason: "not_found",
+    };
+  }
+
+  const validationFailure = validateSavedProfileForManagedExecution(profile);
+  if (validationFailure) {
+    return validationFailure;
+  }
+
+  const snapshot = runProfileProcessManager.start({
+    runProfileId: profile.id,
+    command: profile.command.trim(),
+    workingDirectory: profile.workingDirectory!.trim(),
+  });
+
+  return {
+    ok: true,
+    snapshot,
+    message: snapshot.message,
+  };
+}
+
+export async function stopManagedRunProfile(
+  runProfileId: string,
+): Promise<ManagedRunProfileActionResult> {
+  if (!isCommandExecutionEnabled()) {
+    return disabledManagedResult();
+  }
+
+  const snapshot = runProfileProcessManager.stop(runProfileId);
+  if (!snapshot) {
+    return {
+      ok: false,
+      snapshot: null,
+      message: "No managed process found for this run profile.",
+      reason: "manager_error",
+    };
+  }
+
+  return {
+    ok: true,
+    snapshot,
+    message: snapshot.message,
+  };
+}
+
+export async function restartManagedRunProfile(
+  runProfileId: string,
+): Promise<ManagedRunProfileActionResult> {
+  if (!isCommandExecutionEnabled()) {
+    return disabledManagedResult();
+  }
+
+  const profile = await getRunProfileById(runProfileId);
+  if (!profile) {
+    return {
+      ok: false,
+      snapshot: null,
+      message: "Run profile not found",
+      reason: "not_found",
+    };
+  }
+
+  const validationFailure = validateSavedProfileForManagedExecution(profile);
+  if (validationFailure) {
+    return validationFailure;
+  }
+
+  const snapshot = runProfileProcessManager.restart({
+    runProfileId: profile.id,
+    command: profile.command.trim(),
+    workingDirectory: profile.workingDirectory!.trim(),
+  });
+
+  return {
+    ok: true,
+    snapshot,
+    message: snapshot.message,
+  };
+}
+
+export function getManagedRunProfileSnapshot(
+  runProfileId: string,
+): ManagedRunProfileActionResult {
+  const snapshot = runProfileProcessManager.getSnapshot(runProfileId);
+
+  return {
+    ok: true,
+    snapshot,
+    message: snapshot
+      ? snapshot.message
+      : "No managed process for this run profile.",
+  };
+}
+
+export function listManagedRunProfileSnapshots(): ManagedRunProfileActionResult {
+  const snapshots = runProfileProcessManager.listSnapshots();
+
+  return {
+    ok: true,
+    snapshot: null,
+    snapshots,
+    message:
+      snapshots.length === 0
+        ? "No managed processes are currently registered."
+        : `Found ${snapshots.length} managed process(es).`,
+  };
 }
 
 export async function createRunProfileRecord(

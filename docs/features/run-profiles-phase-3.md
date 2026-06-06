@@ -1,6 +1,6 @@
 # Project Run Profiles — Phase 3: Process Manager with Logs, Stop, and Restart
 
-**Status:** Design specification (not implemented)  
+**Status:** Phase 3A foundation + service/action wrappers implemented; UI not wired yet  
 **Depends on:** Phase 2A (short-command execution, last-run UI)  
 **Target:** Phase 3A MVP, with Phase 3B follow-ups noted inline
 
@@ -329,27 +329,38 @@ Extend **Project Detail → Run Profiles card** (`project-run-profiles-card.tsx`
 | `src/lib/run-profile-process-manager.ts` | Singleton registry, start/stop/restart, lifecycle |
 | `src/lib/run-profile-process-types.ts` | Shared enums/DTOs (optional) |
 
-### Server Actions (extend `src/app/projects/run-profiles/actions.ts`)
+### Server Actions (extend `src/app/projects/run-profiles/actions.ts`) — **implemented (3A wrappers)**
 
 | Action | Returns |
 |--------|---------|
-| `startManagedRunProfileAction(profileId)` | Process snapshot DTO |
-| `stopManagedRunProfileAction(profileId)` | Process snapshot DTO |
-| `restartManagedRunProfileAction(profileId)` | Process snapshot DTO |
-| `getManagedRunProfileStatusAction(profileId)` | Status DTO |
-| `getManagedRunProfileLogsAction(profileId, opts?)` | Log snapshot DTO |
-| `clearManagedRunProfileLogsAction(profileId)` | ok |
+| `startManagedRunProfileAction(profileId)` | `ManagedRunProfileActionResult` |
+| `stopManagedRunProfileAction(profileId)` | `ManagedRunProfileActionResult` |
+| `restartManagedRunProfileAction(profileId)` | `ManagedRunProfileActionResult` |
+| `getManagedRunProfileSnapshotAction(profileId)` | `ManagedRunProfileActionResult` (snapshot includes status + logs) |
+| `listManagedRunProfileSnapshotsAction()` | `ManagedRunProfileActionResult` (`snapshots` array) |
+
+**Not yet implemented:** separate status/logs actions, `clearManagedRunProfileLogsAction`, SSE route. Phase 3A UI will poll `getManagedRunProfileSnapshotAction` (logs embedded in snapshot).
 
 Existing `executeRunProfileAction` **unchanged** for short commands.
 
-### Service wrappers (`src/services/run-profiles.ts`)
+### Service wrappers (`src/services/run-profiles.ts`) — **implemented (3A wrappers)**
 
 ```typescript
-// Examples — thin wrappers
-export function startManagedRunProfile(profileId: string): Promise<ManagedRunSnapshot>
-export function stopManagedRunProfile(profileId: string): Promise<ManagedRunSnapshot>
-// ... load profile, check isCommandExecutionEnabled(), call processManager
+export type ManagedRunProfileActionResult =
+  | { ok: true; snapshot: RunProfileManagedProcessSnapshot | null; snapshots?: RunProfileManagedProcessSnapshot[]; message: string }
+  | { ok: false; snapshot?: RunProfileManagedProcessSnapshot | null; snapshots?: RunProfileManagedProcessSnapshot[]; message: string; reason: "disabled" | "not_found" | "invalid_command" | "missing_working_directory" | "invalid_working_directory" | "not_directory" | "manager_error" };
+
+export function startManagedRunProfile(profileId: string): Promise<ManagedRunProfileActionResult>
+export function stopManagedRunProfile(profileId: string): Promise<ManagedRunProfileActionResult>
+export function restartManagedRunProfile(profileId: string): Promise<ManagedRunProfileActionResult>
+export function getManagedRunProfileSnapshot(profileId: string): ManagedRunProfileActionResult
+export function listManagedRunProfileSnapshots(): ManagedRunProfileActionResult
 ```
+
+- **Mutating** actions (`start`, `stop`, `restart`) require `MANDEV_ENABLE_COMMAND_EXECUTION=true`.
+- **Read** actions (`getManagedRunProfileSnapshot`, `listManagedRunProfileSnapshots`) do not gate on env (in-memory introspection only).
+- Start/restart load `ProjectRunProfile` from DB; command/cwd come from saved profile only.
+- Reuses `validateRunProfileExecutionTarget` before spawn; does **not** apply Phase 2A long-running block.
 
 ### Phase 3B Route Handler (not MVP)
 
@@ -416,14 +427,14 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 
 ### Phase 3A (implement first)
 
-- [ ] Start long-running command via process manager (bypass long-running block on this path only)
-- [ ] In-memory registry keyed by `runProfileId`
+- [x] In-memory registry keyed by `runProfileId` (`run-profile-process-manager.ts`)
+- [x] Bounded in-memory logs (stdout/stderr) (`run-profile-log-buffer.ts`)
+- [x] Service wrappers with DB validation + env gating (`src/services/run-profiles.ts`)
+- [x] Server Actions for start/stop/restart/snapshot/list (`actions.ts`)
+- [x] Unit tests for buffer, manager, service, and actions (mocked spawn / Prisma / fs)
+- [ ] Start long-running command via UI (service path bypasses Phase 2A long-running block)
 - [ ] Poll status + logs via Server Actions (1–2s interval in UI)
-- [ ] Stop with SIGTERM → grace → SIGKILL
-- [ ] Restart
-- [ ] Bounded in-memory logs (stdout/stderr)
 - [ ] Status badge + Run/Stop/Restart + logs panel on Run Profiles card
-- [ ] Unit tests for buffer + manager (mocked spawn)
 
 ### Phase 3B (later)
 

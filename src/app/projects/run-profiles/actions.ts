@@ -13,12 +13,20 @@ import {
   createRunProfileRecord,
   deleteRunProfileRecord,
   executeRunProfileCommand,
+  getManagedRunProfileSnapshot,
   importProjectRunProfilesFromLocalFile,
+  listManagedRunProfileSnapshots,
   previewProjectRunProfilesImportFromLocalFile,
+  restartManagedRunProfile,
   RunProfileImportServiceError,
   RunProfileServiceError,
+  startManagedRunProfile,
+  stopManagedRunProfile,
   updateRunProfileRecord,
+  type ManagedRunProfileActionResult,
 } from "@/services/run-profiles";
+
+export type { ManagedRunProfileActionResult };
 
 export type RunProfileActionState = {
   ok?: boolean;
@@ -142,6 +150,69 @@ export async function previewRunProfilesImportFromLocalPathAction(
     }
     throw e;
   }
+}
+
+function requireManagedRunProfileId(
+  runProfileId: string,
+): ManagedRunProfileActionResult | null {
+  const id = runProfileId.trim();
+  if (!id) {
+    return {
+      ok: false,
+      snapshot: null,
+      message: "Run profile is required.",
+      reason: "not_found",
+    };
+  }
+  return null;
+}
+
+export async function startManagedRunProfileAction(
+  runProfileId: string,
+): Promise<ManagedRunProfileActionResult> {
+  const missing = requireManagedRunProfileId(runProfileId);
+  if (missing) {
+    return missing;
+  }
+
+  return startManagedRunProfile(runProfileId.trim());
+}
+
+export async function stopManagedRunProfileAction(
+  runProfileId: string,
+): Promise<ManagedRunProfileActionResult> {
+  const missing = requireManagedRunProfileId(runProfileId);
+  if (missing) {
+    return missing;
+  }
+
+  return stopManagedRunProfile(runProfileId.trim());
+}
+
+export async function restartManagedRunProfileAction(
+  runProfileId: string,
+): Promise<ManagedRunProfileActionResult> {
+  const missing = requireManagedRunProfileId(runProfileId);
+  if (missing) {
+    return missing;
+  }
+
+  return restartManagedRunProfile(runProfileId.trim());
+}
+
+export async function getManagedRunProfileSnapshotAction(
+  runProfileId: string,
+): Promise<ManagedRunProfileActionResult> {
+  const missing = requireManagedRunProfileId(runProfileId);
+  if (missing) {
+    return missing;
+  }
+
+  return getManagedRunProfileSnapshot(runProfileId.trim());
+}
+
+export async function listManagedRunProfileSnapshotsAction(): Promise<ManagedRunProfileActionResult> {
+  return listManagedRunProfileSnapshots();
 }
 
 export async function executeRunProfileAction(
