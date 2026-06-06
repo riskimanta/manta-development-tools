@@ -10,6 +10,7 @@ import {
   startManagedRunProfileAction,
   stopManagedRunProfileAction,
 } from "@/app/projects/run-profiles/actions";
+import type { ManagedRunProfileActionResult } from "@/lib/run-profile-managed-action-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -253,7 +254,7 @@ export function ManagedRunProfileControls({
   }, [profileId, status]);
 
   function applyActionResult(
-    result: Awaited<ReturnType<typeof startManagedRunProfileAction>>,
+    result: ManagedRunProfileActionResult,
     successToast?: "success" | "message",
   ) {
     if (result.ok) {

@@ -7,6 +7,7 @@ import {
   runProfileUpdateSchema,
 } from "@/lib/validations/run-profile";
 import { getProjectById } from "@/services/projects";
+import type { ManagedRunProfileActionResult } from "@/lib/run-profile-managed-action-types";
 import type { RunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
 import type { RunProfileExecutionResult } from "@/lib/run-profile-execution";
 import {
@@ -23,10 +24,7 @@ import {
   startManagedRunProfile,
   stopManagedRunProfile,
   updateRunProfileRecord,
-  type ManagedRunProfileActionResult,
 } from "@/services/run-profiles";
-
-export type { ManagedRunProfileActionResult };
 
 export type RunProfileActionState = {
   ok?: boolean;

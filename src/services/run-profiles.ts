@@ -11,9 +11,12 @@ import {
   validateRunProfileExecutionTarget,
   type RunProfileExecutionResult,
 } from "@/lib/run-profile-execution";
+import type {
+  ManagedRunProfileActionFailureReason,
+  ManagedRunProfileActionResult,
+} from "@/lib/run-profile-managed-action-types";
 import {
   runProfileProcessManager,
-  type RunProfileManagedProcessSnapshot,
 } from "@/lib/run-profile-process-manager";
 import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-import";
 import { resolveImportedRunProfileWorkingDirectory } from "@/lib/run-profile-working-directory";
@@ -61,30 +64,6 @@ export type RunProfileImportResult = {
   created: number;
   updated: number;
 };
-
-export type ManagedRunProfileActionFailureReason =
-  | "disabled"
-  | "not_found"
-  | "invalid_command"
-  | "missing_working_directory"
-  | "invalid_working_directory"
-  | "not_directory"
-  | "manager_error";
-
-export type ManagedRunProfileActionResult =
-  | {
-      ok: true;
-      snapshot: RunProfileManagedProcessSnapshot | null;
-      snapshots?: RunProfileManagedProcessSnapshot[];
-      message: string;
-    }
-  | {
-      ok: false;
-      snapshot?: RunProfileManagedProcessSnapshot | null;
-      snapshots?: RunProfileManagedProcessSnapshot[];
-      message: string;
-      reason: ManagedRunProfileActionFailureReason;
-    };
 
 type RunProfileFsAccess = {
   exists: (path: string) => boolean;

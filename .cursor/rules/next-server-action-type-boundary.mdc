@@ -1,0 +1,148 @@
+---
+description: Prevent runtime ReferenceError from exporting types in "use server" modules
+globs:
+  - "src/app/**/actions.ts"
+  - "src/app/**/actions/**/*.ts"
+  - "src/components/**"
+  - "src/services/**"
+  - "src/lib/**/*-types.ts"
+  - "src/lib/**/*-action-types.ts"
+alwaysApply: false
+---
+
+# Next.js Server Action Type Boundary
+
+## When this applies
+
+Use this rule when editing:
+
+- `src/app/**/actions.ts`
+- any file with `"use server"`
+- client components that import Server Actions
+- service/action result types shared between server and client
+
+Examples:
+
+- Adding a new Server Action and its result type
+- Typing client-side action handlers (`useActionState`, `startTransition`, etc.)
+- Sharing serializable action payloads between services and UI
+
+## Common failure symptoms
+
+If runtime shows:
+
+`ReferenceError: <TypeName> is not defined`
+
+especially during Project Detail or other page render, check the Server Actions module first.
+
+Other signals:
+
+- Turbopack/Next.js runtime error while evaluating a `"use server"` file
+- stack trace pointing at `src/app/**/actions.ts`
+- error on a line like `export type { Something }` in a `"use server"` file
+- crash after a client component imports a type from an actions module
+
+Recent example: `ManagedRunProfileActionResult is not defined` from `export type { ManagedRunProfileActionResult };` in `src/app/projects/run-profiles/actions.ts`.
+
+## Required rule
+
+- `"use server"` modules must export runtime Server Action **functions** only.
+- Do **not** re-export imported types from `"use server"` files (`export type { SomeType }` is forbidden).
+- Shared action result types must live in a safe pure module, for example `src/lib/*-types.ts` or `src/lib/*-action-types.ts`.
+- Client components must import shared types with `import type` from the pure module — not from `src/app/**/actions.ts`.
+- Service files may import shared types with `import type` from the pure module.
+- The pure type module must **not** import:
+  - Prisma
+  - `next/*`
+  - `server-only`
+  - filesystem (`node:fs`)
+  - `child_process`
+  - any `"use server"` module
+
+Inline `export type Foo = { ... }` defined entirely inside a `"use server"` file is still risky for client imports; prefer moving shared result types to `src/lib/*` even when defined locally.
+
+## Forbidden shortcuts
+
+Do not:
+
+- add `export type { SomeType };` in a `"use server"` file
+- import shared result types into client components from `src/app/**/actions.ts`
+- silence the runtime error by converting the type to a fake runtime value (const enum hack, empty object cast, etc.)
+- weaken Server Action safety or move Server Action functions into client-safe modules
+
+## Safe pattern
+
+```ts
+// src/lib/example-action-types.ts
+export type ExampleActionResult =
+  | { ok: true; message: string }
+  | { ok: false; message: string; reason: string };
+```
+
+```ts
+// src/services/example.ts
+import type { ExampleActionResult } from "@/lib/example-action-types";
+```
+
+```ts
+// src/app/example/actions.ts
+"use server";
+
+import type { ExampleActionResult } from "@/lib/example-action-types";
+import { doThing } from "@/services/example";
+
+export async function doThingAction(): Promise<ExampleActionResult> {
+  return doThing();
+}
+```
+
+```tsx
+// client component
+"use client";
+
+import type { ExampleActionResult } from "@/lib/example-action-types";
+import { doThingAction } from "@/app/example/actions";
+```
+
+## Required workflow before finishing
+
+1. Search for risky exports:
+
+   - `rg "export type \\{" src/app`
+   - `rg "from .*/actions" src/components src/lib src/services`
+
+2. Ensure client components use `import type` for shared types from `src/lib/*`, not from actions files.
+
+3. Ensure `"use server"` files export only action functions at runtime.
+
+4. Run:
+
+   - `pnpm test`
+   - `pnpm typecheck`
+   - `pnpm lint`
+
+5. Restart dev server if needed and manually open the affected page.
+
+## Verification checklist
+
+Before claiming the task is complete:
+
+- [ ] No `export type { ... }` re-exports in `"use server"` files
+- [ ] Shared action result types live in `src/lib/*-types.ts` (or similar pure module)
+- [ ] Client components import shared types with `import type` from the lib module
+- [ ] Pure type module has no Prisma, `next/*`, `server-only`, fs, or `"use server"` imports
+- [ ] `pnpm test` passes (when logic changed)
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm lint` passes
+- [ ] Affected route opens without runtime error
+
+## RESULT.md rule
+
+Do not append a new historical section to `RESULT.md`.
+
+Overwrite `RESULT.md` with a concise current-state report. When this rule is added or triggered by a fix, include:
+
+- Root cause
+- Rule added or applied
+- Files changed
+- Verification status
