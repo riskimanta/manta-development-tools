@@ -140,8 +140,7 @@ type ManagedRunProfileProcess = {
   startedAt: Date | null;
   stoppedAt: Date | null;
   exitCode: number | null;
-  stdout: RunProfileLogBuffer;
-  stderr: RunProfileLogBuffer;
+  logs: RunProfileLogBuffer;
   lastError: string | null;
 };
 ```
@@ -156,10 +155,13 @@ type ManagedRunProfileProcess = {
 
 ### Log buffers
 
-`src/lib/run-profile-log-buffer.ts`:
+`src/lib/run-profile-log-buffer.ts` (**implemented in Phase 3A foundation**):
 
-- Ring buffer: last **N lines** (default 500) **and** last **N KB** (default 256 KB) per stream — whichever limit is hit first.
-- Expose `append(chunk)`, `getLines()`, `getText()`, `clear()`, `byteLength`.
+- Single `RunProfileLogBuffer` instance holds **stdout** and **stderr** separately.
+- Default **64 KB (65536 characters) per stream**; configurable via `maxCharsPerStream`.
+- Character-based tail retention: when a stream exceeds the limit, **older content is discarded** and the **most recent** characters are kept.
+- `snapshot()` returns `{ stdout, stderr, stdoutTruncated, stderrTruncated }` — serializable for Server Action polling.
+- `appendStdout` / `appendStderr` accept chunked output; `clear()` resets content and truncation flags.
 
 ### Client updates
 
@@ -268,7 +270,7 @@ Polling contract:
 
 | Rule | Detail |
 |------|--------|
-| Bounded size | Default 500 lines and 256 KB per stream (constants in `run-profile-log-buffer.ts`) |
+| Bounded size | Default 64 KB (65536 chars) per stream via `RUN_PROFILE_LOG_BUFFER_DEFAULT_MAX_CHARS` |
 | Separate streams | stdout and stderr stored independently; UI tabs or stacked sections |
 | Truncation indicator | When older lines drop, prefix snapshot with `[… earlier output truncated …]` |
 | Memory safety | Ring buffer evicts oldest lines/bytes; no unbounded string concat |

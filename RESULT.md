@@ -2,44 +2,45 @@
 
 ## Project summary
 
-ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Run profile execution (Phase 2A) supports opt-in short commands with session-only last-run UI; long-running dev servers remain blocked until Phase 3 is implemented.
+ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Phase 2A provides opt-in short-command execution with session-only last-run UI. Phase 3 (process manager, live logs, stop/restart) is in progress.
 
-## What document was added
+## Feature implemented
 
-**`docs/features/run-profiles-phase-3.md`** — design specification for Project Run Profiles Phase 3: Process Manager with Logs, Stop, and Restart. Covers architecture, safety, lifecycle, log delivery comparison, UI/backend modules, persistence decision, edge cases, testing, MVP scope (3A vs 3B), acceptance criteria, and risks.
+**Run Profiles Phase 3A Foundation: Bounded Log Buffer**
 
-Also updated:
+A small, well-tested utility for storing recent stdout/stderr from managed run profiles without unbounded memory growth. This is the first building block for the Phase 3 process manager; it does not spawn processes or change the UI.
 
-- `docs/features/index.md` — index row for Phase 3 design doc
-- `docs/features/path-map.md` — run profile implementation paths mapped to Phase 3 doc
+## Why this is Phase 3A foundation
 
-## Key recommendation for Phase 3 architecture
-
-Use an **in-memory process registry singleton** (`src/lib/run-profile-process-manager.ts`) keyed by `runProfileId`, with **bounded stdout/stderr ring buffers** (`src/lib/run-profile-log-buffer.ts`), and **polling via Server Actions** for Phase 3A MVP (1–2s interval). Defer SSE streaming, DB run history, and process-group orphan cleanup to Phase 3B. Keep Phase 2A short-command execution (`executeRunProfileAction`, 30s timeout) as a separate path; only the managed start path bypasses the long-running command block.
+The Phase 3 design (`docs/features/run-profiles-phase-3.md`) calls for in-memory process tracking with bounded log buffers and polling via Server Actions. The process manager (next task) will attach `child_process` stdout/stderr handlers to `RunProfileLogBuffer`; Server Actions will return `snapshot()` DTOs to the UI. Implementing the buffer in isolation keeps this PR focused, fully testable, and free of execution/UI risk.
 
 ## Files changed
 
-- `docs/features/run-profiles-phase-3.md` — new design specification
-- `docs/features/index.md` — feature index entry
-- `docs/features/path-map.md` — path mapping for run profile modules
+- `src/lib/run-profile-log-buffer.ts` — `RunProfileLogBuffer` class and types (new)
+- `src/lib/run-profile-log-buffer.test.ts` — unit tests (new)
+- `docs/features/run-profiles-phase-3.md` — aligned log buffer API/defaults with implementation
 - `RESULT.md` — this report
 
-## Whether code behavior changed
+## Log buffer behavior
 
-**No.** Documentation-only task; no Phase 3 implementation.
+- **Default limit:** 64 KB (65536 characters) per stream (`RUN_PROFILE_LOG_BUFFER_DEFAULT_MAX_CHARS`)
+- **API:** `appendStdout`, `appendStderr`, `snapshot()`, `clear()`
+- **Truncation:** When a stream exceeds the limit, older content is dropped; the tail is kept; `stdoutTruncated` / `stderrTruncated` flags are set (sticky until `clear()`)
+- **Order:** Appends preserve chronological order within each stream
+- **Chunks:** Handles many small chunks, single oversized chunks, and newline-containing text
+- **Guards:** Empty strings and non-string chunks are ignored
+- **Serializable:** `RunProfileLogSnapshot` is plain strings and booleans for future Server Action responses
+
+## Whether code behavior changed in the app UI
+
+**No.** No process manager, Server Actions, command execution changes, or UI updates. Run profile behavior remains Phase 2A only.
 
 ## Test / lint / typecheck status
 
-- `pnpm test`: Not re-run (docs-only; no code changes; existing suite unaffected)
+- `pnpm test`: Pass
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass
 
-## Known limitations (unchanged in code)
-
-- Phase 2A: short commands only; long-running patterns blocked
-- Last run result is session-only on the profile card
-- No live logs, stop, restart, or persistent process tracking
-
 ## Recommended next step
 
-Implement **Phase 3A** per the design doc: process manager + log buffer + Server Actions (start/stop/restart/status/logs) + polled logs UI on the Run Profiles card. Write unit tests for buffer and manager (mocked `child_process`) before production code.
+Implement **`src/lib/run-profile-process-manager.ts`** with mocked-spawn unit tests: in-memory registry keyed by `runProfileId`, start/stop lifecycle stubs that wire stdout/stderr into `RunProfileLogBuffer`, without enabling long-running commands in the UI yet.
