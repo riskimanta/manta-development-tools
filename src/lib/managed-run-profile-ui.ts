@@ -32,6 +32,26 @@ export function applyManagedRunProfileBootSessionId(
   };
 }
 
+export function resolveManagedRunProfileActionMessage(input: {
+  showStaleStateNotice: boolean;
+  actionMessage: string | null | undefined;
+  status: RunProfileManagedProcessStatus;
+}): string | null {
+  const trimmed = input.actionMessage?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (
+    input.showStaleStateNotice &&
+    !shouldPollManagedRunProfileSnapshot(input.status)
+  ) {
+    return null;
+  }
+
+  return trimmed;
+}
+
 export function resolveManagedRunProfileStatus(
   status: RunProfileManagedProcessStatus | null | undefined,
 ): RunProfileManagedProcessStatus {

@@ -6,6 +6,7 @@ import {
   canStartManagedRunProfile,
   canStopManagedRunProfile,
   managedRunProfileStatusLabel,
+  resolveManagedRunProfileActionMessage,
   resolveManagedRunProfileStatus,
   shouldPollManagedRunProfileSnapshot,
   shouldShowManagedRunProfileStaleNotice,
@@ -124,5 +125,47 @@ describe("applyManagedRunProfileBootSessionId", () => {
       bootSessionId: "boot-a",
       showStaleNotice: false,
     });
+  });
+});
+
+describe("resolveManagedRunProfileActionMessage", () => {
+  it("returns the action message when stale notice is not shown", () => {
+    expect(
+      resolveManagedRunProfileActionMessage({
+        showStaleStateNotice: false,
+        actionMessage: "Process is running.",
+        status: "running",
+      }),
+    ).toBe("Process is running.");
+  });
+
+  it("omits stale action text when stale notice is shown and status is idle", () => {
+    expect(
+      resolveManagedRunProfileActionMessage({
+        showStaleStateNotice: true,
+        actionMessage: "Process is running.",
+        status: "idle",
+      }),
+    ).toBeNull();
+  });
+
+  it("shows current action text after restart when status is active again", () => {
+    expect(
+      resolveManagedRunProfileActionMessage({
+        showStaleStateNotice: true,
+        actionMessage: "Process is starting.",
+        status: "starting",
+      }),
+    ).toBe("Process is starting.");
+  });
+
+  it("returns null for blank action messages", () => {
+    expect(
+      resolveManagedRunProfileActionMessage({
+        showStaleStateNotice: false,
+        actionMessage: "   ",
+        status: "idle",
+      }),
+    ).toBeNull();
   });
 });
