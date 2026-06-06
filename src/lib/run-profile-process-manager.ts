@@ -46,6 +46,21 @@ type RunProfileProcessStartInput = {
   workingDirectory: string;
 };
 
+export type RunProfileManagedProcessLifecycleEvent = {
+  type: "spawn" | "error" | "close";
+  snapshot: RunProfileManagedProcessSnapshot;
+};
+
+export type RunProfileManagedProcessLifecycleHandler = (
+  event: RunProfileManagedProcessLifecycleEvent,
+) => void | Promise<void>;
+
+export function isManagedProcessStartAccepted(
+  snapshot: RunProfileManagedProcessSnapshot,
+): boolean {
+  return !snapshot.message.startsWith("Process is already");
+}
+
 type ManagedProcessEntry = {
   runProfileId: string;
   command: string;
@@ -72,6 +87,7 @@ export type RunProfileProcessManagerOptions = {
   clearTimeoutFn?: typeof clearTimeout;
   platform?: string;
   processKill?: (pid: number, signal?: NodeJS.Signals | number) => boolean;
+  lifecycleHandler?: RunProfileManagedProcessLifecycleHandler;
 };
 
 function isWindowsPlatform(platform: string): boolean {
@@ -130,6 +146,7 @@ export class RunProfileProcessManager {
   ) => boolean;
   private readonly useProcessGroups: boolean;
   private readonly registry = new Map<string, ManagedProcessEntry>();
+  private lifecycleHandler?: RunProfileManagedProcessLifecycleHandler;
 
   constructor(options: RunProfileProcessManagerOptions = {}) {
     this.spawnFn = options.spawn ?? nodeSpawn;
@@ -143,6 +160,44 @@ export class RunProfileProcessManager {
       options.processKill ??
       ((pid, signal) => process.kill(pid, signal));
     this.useProcessGroups = !isWindowsPlatform(this.platform);
+    this.lifecycleHandler = options.lifecycleHandler;
+  }
+
+  setLifecycleHandler(
+    handler: RunProfileManagedProcessLifecycleHandler | undefined,
+  ): void {
+    this.lifecycleHandler = handler;
+  }
+
+  private emitLifecycle(
+    type: RunProfileManagedProcessLifecycleEvent["type"],
+    entry: ManagedProcessEntry,
+  ): void {
+    const handler = this.lifecycleHandler;
+    if (!handler) {
+      return;
+    }
+
+    try {
+      const result = handler({
+        type,
+        snapshot: toSnapshot(entry),
+      });
+
+      if (result instanceof Promise) {
+        result.catch((error: unknown) => {
+          console.error(
+            `[run-profile-process-manager] lifecycle handler failed (${type}):`,
+            error,
+          );
+        });
+      }
+    } catch (error) {
+      console.error(
+        `[run-profile-process-manager] lifecycle handler failed (${type}):`,
+        error,
+      );
+    }
   }
 
   start(input: RunProfileProcessStartInput): RunProfileManagedProcessSnapshot {
@@ -261,6 +316,7 @@ export class RunProfileProcessManager {
         entry.status = "running";
         entry.pid = child.pid ?? null;
         entry.message = "Process is running.";
+        this.emitLifecycle("spawn", entry);
       }
     });
 
@@ -271,6 +327,7 @@ export class RunProfileProcessManager {
       entry.exitedAt = new Date();
       entry.message = `Failed to start command: ${error.message}`;
       entry.logs.appendStderr(error.message);
+      this.emitLifecycle("error", entry);
     });
 
     child.on("close", (code, signal) => {
@@ -283,17 +340,20 @@ export class RunProfileProcessManager {
       if (entry.userStopRequested || entry.status === "stopping") {
         entry.status = "stopped";
         entry.message = "Process stopped.";
+        this.emitLifecycle("close", entry);
         return;
       }
 
       if (code === 0) {
         entry.status = "exited";
         entry.message = "Process exited with code 0.";
+        this.emitLifecycle("close", entry);
         return;
       }
 
       entry.status = "failed";
       entry.message = `Process exited with code ${code ?? "unknown"}.`;
+      this.emitLifecycle("close", entry);
     });
   }
 
@@ -343,6 +403,10 @@ export class RunProfileProcessManager {
   private forceStopForRestart(entry: ManagedProcessEntry): void {
     this.clearStopGraceTimer(entry);
     entry.userStopRequested = true;
+    entry.status = "stopped";
+    entry.stoppedAt = entry.stoppedAt ?? new Date();
+    entry.exitedAt = new Date();
+    entry.message = "Process stopped.";
 
     const child = entry.child;
     if (child && !child.killed) {
@@ -351,6 +415,9 @@ export class RunProfileProcessManager {
       child.stderr?.removeAllListeners();
       this.killChildProcess(child, "SIGTERM");
     }
+
+    entry.child = null;
+    this.emitLifecycle("close", entry);
   }
 
   private disposeChild(entry: ManagedProcessEntry): void {

@@ -1,19 +1,37 @@
-# ManDev — Run Profiles stale notice copy fix
+# ManDev — Run Profiles Phase 3C foundation (persistent run history)
 
 ## What changed
 
-**`src/lib/managed-run-profile-ui.ts`** — Added `resolveManagedRunProfileActionMessage()` to omit supporting action text when the stale restart notice is active and status is idle/terminal.
+**`prisma/schema.prisma`** — Added `ProjectRunProfileRun` model with indexes on `runProfileId`, `startedAt`, and `(runProfileId, startedAt)`.
 
-**`src/components/projects/managed-run-profile-controls.tsx`** — Clears stale action message on boot-session change; updates action message when snapshot is absent; renders via `resolveManagedRunProfileActionMessage()` so text like “Process is running.” no longer appears alongside the stale banner.
+**`prisma/migrations/20260606183000_add_project_run_profile_runs/`** — SQLite migration for run history table.
 
-**`src/lib/managed-run-profile-ui.test.ts`** — Tests for the new helper.
+**`src/lib/run-profile-run-history-types.ts`** — Serializable `RunProfileRunRecord` DTO.
 
-## Behavior
+**`src/services/run-profile-run-history.ts`** — DB helpers: create on managed start, update on spawn, finalize on terminal lifecycle, list/get latest runs. DB failures are logged, not thrown.
 
-After app/server restart, the amber stale notice still appears and status shows `Idle`, but conflicting old running copy is hidden. If the user starts the profile again, active-state messages show normally.
+**`src/lib/run-profile-process-manager.ts`** — Typed lifecycle callbacks (`spawn`, `error`, `close`) via `setLifecycleHandler`; restart force-stop emits `close` before listeners are removed.
+
+**`src/services/run-profiles.ts`** — Registers lifecycle handler; creates run history on accepted managed start/restart; re-exports `listRunProfileRuns` / `getLatestRunProfileRun`.
+
+**Tests** — `run-profile-run-history.test.ts`, lifecycle handler test, integration expectations in `run-profiles.test.ts`.
+
+**`docs/features/run-profiles-phase-3.md`** — Phase 3C foundation note.
+
+## Schema / migration
+
+New table `ProjectRunProfileRun` (cascade delete with profile). Run `pnpm db:migrate` (or apply migration `20260606183000_add_project_run_profile_runs`).
+
+## Known limitations
+
+- Live managed process state remains in-memory only.
+- No run-history UI in this step.
+- Server restart mid-run may leave an open `running` history row (orphan metadata).
+- Phase 2A short command execution unchanged.
 
 ## Test / lint / typecheck status
 
-- `pnpm test`: Pass (354 tests)
+- `pnpm db:generate` + `prisma migrate deploy`: applied `20260606183000_add_project_run_profile_runs`
+- `pnpm test`: Pass (366 tests)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass

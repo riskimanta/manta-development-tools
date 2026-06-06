@@ -17,7 +17,9 @@ import type {
 } from "@/lib/run-profile-managed-action-types";
 import {
   getRunProfileProcessManagerBootSessionId,
+  isManagedProcessStartAccepted,
   runProfileProcessManager,
+  type RunProfileManagedProcessLifecycleEvent,
 } from "@/lib/run-profile-process-manager";
 import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-import";
 import { resolveImportedRunProfileWorkingDirectory } from "@/lib/run-profile-working-directory";
@@ -28,6 +30,17 @@ import type {
   RunProfileCreateInput,
   RunProfileUpdateInput,
 } from "@/lib/validations/run-profile";
+import {
+  createRunProfileRunForManagedStart,
+  finalizeRunProfileRunFromSnapshot,
+  updateRunProfileRunOnSpawn,
+} from "@/services/run-profile-run-history";
+
+export {
+  getLatestRunProfileRun,
+  listRunProfileRuns,
+} from "@/services/run-profile-run-history";
+export type { RunProfileRunRecord } from "@/lib/run-profile-run-history-types";
 
 export class RunProfileServiceError extends Error {
   readonly code: "PROJECT_NOT_FOUND" | "RUN_PROFILE_NOT_FOUND";
@@ -157,6 +170,21 @@ function disabledManagedResult(): ManagedRunProfileActionResult {
   });
 }
 
+async function handleManagedProcessLifecycleEvent(
+  event: RunProfileManagedProcessLifecycleEvent,
+): Promise<void> {
+  if (event.type === "spawn") {
+    await updateRunProfileRunOnSpawn(event.snapshot);
+    return;
+  }
+
+  await finalizeRunProfileRunFromSnapshot(event.snapshot);
+}
+
+runProfileProcessManager.setLifecycleHandler((event) =>
+  handleManagedProcessLifecycleEvent(event),
+);
+
 export function resolveRunProfileWorkingDirectory(
   workingDirectory: string | null | undefined,
   projectLocalPath: string | null | undefined,
@@ -247,6 +275,10 @@ export async function startManagedRunProfile(
     workingDirectory: profile.workingDirectory!.trim(),
   });
 
+  if (isManagedProcessStartAccepted(snapshot)) {
+    await createRunProfileRunForManagedStart(snapshot);
+  }
+
   return withProcessManagerBootSessionId({
     ok: true,
     snapshot,
@@ -305,6 +337,10 @@ export async function restartManagedRunProfile(
     command: profile.command.trim(),
     workingDirectory: profile.workingDirectory!.trim(),
   });
+
+  if (isManagedProcessStartAccepted(snapshot)) {
+    await createRunProfileRunForManagedStart(snapshot);
+  }
 
   return withProcessManagerBootSessionId({
     ok: true,

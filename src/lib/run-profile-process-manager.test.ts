@@ -126,6 +126,39 @@ describe("RunProfileProcessManager", () => {
     );
   });
 
+  it("invokes lifecycle handler on spawn, error, and close", async () => {
+    const lifecycleHandler = vi.fn();
+    manager.setLifecycleHandler(lifecycleHandler);
+
+    manager.start(startInput);
+    const child = latestChild();
+    await flushMicrotasks();
+
+    expect(lifecycleHandler).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "spawn" }),
+    );
+
+    spawn.mockImplementationOnce(() => {
+      const failedChild = createMockChild({ emitSpawn: false });
+      queueMicrotask(() => emitError(failedChild, "spawn failed"));
+      return failedChild;
+    });
+    manager.start({
+      ...startInput,
+      runProfileId: "profile-error",
+    });
+    await flushMicrotasks();
+
+    expect(lifecycleHandler).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "error" }),
+    );
+
+    emitClose(child, 0);
+    expect(lifecycleHandler).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "close" }),
+    );
+  });
+
   it("transitions to exited on exit code 0", async () => {
     manager.start(startInput);
     const child = latestChild();

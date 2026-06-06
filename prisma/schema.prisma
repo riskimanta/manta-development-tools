@@ -41,10 +41,35 @@ model ProjectRunProfile {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  runs    ProjectRunProfileRun[]
 
   @@index([projectId])
   @@index([projectId, isDefault])
+}
+
+model ProjectRunProfileRun {
+  id               String    @id @default(cuid())
+  runProfileId     String
+  status           String
+  command          String
+  workingDirectory String
+  pid              Int?
+  startedAt        DateTime
+  endedAt          DateTime?
+  exitCode         Int?
+  signal           String?
+  durationMs       Int?
+  stdoutPreview    String?
+  stderrPreview    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  runProfile ProjectRunProfile @relation(fields: [runProfileId], references: [id], onDelete: Cascade)
+
+  @@index([runProfileId])
+  @@index([startedAt])
+  @@index([runProfileId, startedAt])
 }
 
 model ProjectArchitecture {
