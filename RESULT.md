@@ -1,32 +1,19 @@
-# ManDev — current state
+# ManDev — Run Profiles Phase 3B (safe stop)
 
-## Rule added
+## What changed
 
-**`.cursor/rules/next-server-action-type-boundary.mdc`** — Cursor rule for Next.js Server Action type boundaries.
+**`src/lib/run-profile-process-manager.ts`** — POSIX managed processes spawn with `detached: true` so the shell leads a process group. Stop, restart force-stop, and dispose prefer `process.kill(-pid, signal)` on macOS/Linux, falling back to direct `child.kill` when group kill fails. Windows behavior is unchanged (no `detached`, direct child kill only).
 
-## Why it was added
+**`src/lib/run-profile-process-manager.test.ts`** — Added POSIX spawn/stop tests (process-group kill, SIGKILL escalation, fallback, Windows path). Existing tests pin `platform: "win32"` to preserve prior expectations.
 
-Project Detail crashed with `ReferenceError: ManagedRunProfileActionResult is not defined`. Root cause: `src/app/projects/run-profiles/actions.ts` (`"use server"`) contained `export type { ManagedRunProfileActionResult };` re-exporting a type from `@/services/run-profiles`. Turbopack evaluated the module at runtime and emitted a reference to a type-only symbol that does not exist as a JS value.
+**`docs/features/run-profiles-phase-3.md`** — Documented Phase 3B safe-stop behavior and marked Unix process-group item done.
 
-The runtime fix (prior task) moved shared types to `src/lib/run-profile-managed-action-types.ts`. This rule prevents the same mistake on future Server Action work.
+## Public API / UI
 
-## File changed
-
-- `.cursor/rules/next-server-action-type-boundary.mdc` — **new** rule (globs: `actions.ts`, client components, services, lib type modules)
-- `RESULT.md` — this report
-
-No app runtime code changed in this task. Prior fix remains in place; `rg "export type \\{" src/app` finds no re-export pattern.
-
-## Whether app behavior changed
-
-**No.** Documentation/guardrail only. Application behavior is unchanged.
+Unchanged. No DB schema or UI changes.
 
 ## Test / lint / typecheck status
 
-- `pnpm test`: **Not run** — rules/docs-only change; no runtime code modified
+- `pnpm test`: Pass (343 tests)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass
-
-## Recommended next step
-
-Optionally migrate remaining client imports of inline action state types (e.g. `ActionState`, `RunProfileActionState`, `LoginState` from various `actions.ts` files) into `src/lib/*-types.ts` modules to fully align with the new rule and reduce future risk.

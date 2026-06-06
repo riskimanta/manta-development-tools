@@ -33,7 +33,7 @@ Phase 2A **short-command execution** (30s timeout, fire-and-wait) remains availa
 - Multi-user concurrency guarantees across ManDev instances
 - Persistent run history or log files in the database (MVP)
 - Automatic orphan cleanup across ManDev server restarts (MVP limitation, documented)
-- Windows-first process-tree killing (best-effort on macOS/Linux for MVP)
+- Windows-first process-tree killing (Windows still uses direct child kill; Unix uses process groups in Phase 3B)
 
 ---
 
@@ -153,9 +153,10 @@ Internal registry entry also holds `ChildProcess` (server-only, not in snapshot)
 
 - Reuse validation from `validateRunProfileExecutionTarget`.
 - **Do not** call `isLikelyLongRunningRunProfileCommand` block on the process-manager path (that guard stays on the Phase 2A short runner only).
-- Spawn: `spawn(command, [], { cwd, shell: true, stdio: ['ignore', 'pipe', 'pipe'] })`.
+- Spawn: `spawn(command, [], { cwd, shell: true, stdio: ['ignore', 'pipe', 'pipe'], detached: true })` on macOS/Linux (`detached` omitted on Windows).
 - Attach `data` handlers → append to bounded log buffers.
 - On `spawn` / `error` / `close` → update status and exit metadata.
+- **Phase 3B (implemented):** POSIX spawn uses `detached: true` so the shell becomes a process-group leader; stop/restart/dispose prefer `process.kill(-pid, signal)` to terminate the group, falling back to direct `child.kill` when group kill fails. Windows keeps direct child kill only.
 
 ### Log buffers
 
@@ -249,9 +250,9 @@ Polling contract:
 
 1. If status is not `running` (or `starting`), return current snapshot (idempotent).
 2. Set status → `stopping`.
-3. Send **SIGTERM** to `child.pid`.
+3. Send **SIGTERM** to the managed process (POSIX: prefer `process.kill(-pid, 'SIGTERM')` for the process group; Windows: direct `child.kill`).
 4. Start grace timer (`RUN_PROFILE_PROCESS_STOP_GRACE_MS`, default **5000 ms**; injectable in tests).
-5. If still alive after grace → **SIGKILL**.
+5. If still alive after grace → **SIGKILL** (same group/direct fallback as step 3).
 6. On `close` → set `stoppedAt`, `exitCode`, status → `stopped` (user-initiated) or `exited` (natural close during stopping).
 
 ### Restart
@@ -264,8 +265,8 @@ Polling contract:
 
 | Platform | Notes |
 |----------|-------|
-| **macOS / Linux** | SIGTERM/SIGKILL apply to the shell child; **process trees** (e.g. `pnpm dev` → node) may survive if only the shell dies. MVP kills direct child; document that users may need `detached: false` and same behavior as their terminal. Optional 3B: `detached` + process group (`kill(-pgid)`) on Unix. |
-| **Windows** | No SIGTERM; Node maps to `taskkill`. Tree kill requires `taskkill /T /F`. MVP: best-effort on direct child; document Windows limitations. |
+| **macOS / Linux** | Spawn with `detached: true`; stop/restart/dispose prefer `kill(-pid)` on the process group, then fall back to direct child kill. Reduces orphan shells/nodes for typical `pnpm dev`-style commands; not a full tree guarantee for every shell pattern. |
+| **Windows** | No process-group kill; Node maps signals to `taskkill` on the direct child. Tree kill would require `taskkill /T /F` (future). |
 | **Docker** | `docker compose up` may need SIGTERM to compose CLI; container stop semantics vary. Not fully solved in MVP. |
 
 ---
@@ -402,7 +403,7 @@ If persistence is needed later, prefer **DB for metadata only** (run id, profile
 | **cwd deleted after start** | Running process unaffected; restart/start validation fails with blocked message |
 | **Duplicate starts** | If already `running`/`starting`, return existing snapshot or reject with message (recommend **reject** for clarity) |
 | **Multiple profiles at once** | Supported — registry keyed by `runProfileId`; independent processes |
-| **Stopping process trees** | MVP: kill direct child only; document limitation; 3B explore Unix process groups |
+| **Stopping process trees** | Phase 3B: POSIX process-group kill via `detached` spawn + `kill(-pid)` with direct-child fallback; Windows direct child only |
 | **Concurrent stop + restart** | Serialize per `runProfileId` with in-manager mutex/queue |
 | **Profile deleted while running** | On delete action, attempt stop then remove registry entry |
 | **Command execution disabled mid-run** | Do not auto-kill; prevent new starts; stop still allowed |
@@ -414,7 +415,7 @@ If persistence is needed later, prefer **DB for metadata only** (run id, profile
 | Area | Approach |
 |------|----------|
 | Log buffer | Unit tests: append, line cap, byte cap, truncation message, clear |
-| Process manager | Mock `child_process.spawn`; simulate stdout/stderr `data`, `close`, `error`; test lifecycle transitions, stop grace, duplicate start rejection |
+| Process manager | Mock `child_process.spawn`; simulate stdout/stderr `data`, `close`, `error`; test lifecycle transitions, stop grace, duplicate start rejection, POSIX process-group spawn/stop and Windows fallback |
 | Server Actions | Mock service/manager; assert disabled when env off, not-found profile, DTO shape |
 | Integration | Avoid real `pnpm dev` in CI; use `node -e "console.log('ok'); setInterval(()=>{}, 10000)"` only in manual QA |
 | Existing Phase 2A tests | Must remain green; long-running block stays on short path |
@@ -440,7 +441,7 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 
 - [ ] SSE log streaming Route Handler
 - [ ] Persisted run history (metadata in DB, optional log files)
-- [ ] Unix process groups / improved tree kill
+- [x] Unix process groups / improved tree kill (Phase 3B safe stop — `detached` spawn + `kill(-pid)` on POSIX, Windows unchanged)
 - [ ] Orphan detection (pidfile or startup scan)
 - [ ] Bind-address exposure warning automation
 - [ ] Clear separation UI: "Run once" (30s) vs "Start server" (managed)
@@ -473,7 +474,7 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 | **Security** — shell injection via saved commands | Arbitrary code as OS user | Opt-in env; confirmation; admin-only profile CRUD; exposure warning; no public deployment docs |
 | **Orphan processes** — server crash/restart | Zombie dev servers, port leaks | Document; Phase 3B pid tracking; UI note after restart |
 | **Memory** — verbose logs | OOM on ManDev server | Bounded buffers; line + byte caps; truncation UI |
-| **Platform** — incomplete tree kill | Stop leaves node children | Document; Unix process group in 3B |
+| **Platform** — incomplete tree kill | Stop leaves node children | Phase 3B POSIX process groups; Windows still direct child; document limits |
 | **UX** — polling lag | Logs feel delayed | 1s poll while running; SSE in 3B |
 | **UX** — confused Run vs Start | Wrong action for long cmd | Label buttons "Run once" vs "Start" in 3B; Phase 3A can use "Start" for managed path |
 | **Next.js dev HMR** | Registry wiped on hot reload in dev | Accept for dev; production `next start` more stable; document |

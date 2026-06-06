@@ -1,4 +1,4 @@
-import { spawn as nodeSpawn, type ChildProcess } from "node:child_process";
+import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 
 import {
   RunProfileLogBuffer,
@@ -62,7 +62,25 @@ export type RunProfileProcessManagerOptions = {
   logBufferOptions?: RunProfileLogBufferOptions;
   setTimeoutFn?: typeof setTimeout;
   clearTimeoutFn?: typeof clearTimeout;
+  platform?: string;
+  processKill?: (pid: number, signal?: NodeJS.Signals | number) => boolean;
 };
+
+function isWindowsPlatform(platform: string): boolean {
+  return platform === "win32";
+}
+
+function buildManagedProcessSpawnOptions(
+  workingDirectory: string,
+  platform: string,
+): SpawnOptions {
+  return {
+    cwd: workingDirectory,
+    shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
+    ...(isWindowsPlatform(platform) ? {} : { detached: true }),
+  };
+}
 
 const ACTIVE_STATUSES: RunProfileManagedProcessStatus[] = [
   "starting",
@@ -97,6 +115,12 @@ export class RunProfileProcessManager {
   private readonly logBufferOptions: RunProfileLogBufferOptions;
   private readonly setTimeoutFn: typeof setTimeout;
   private readonly clearTimeoutFn: typeof clearTimeout;
+  private readonly platform: string;
+  private readonly processKillFn: (
+    pid: number,
+    signal?: NodeJS.Signals | number,
+  ) => boolean;
+  private readonly useProcessGroups: boolean;
   private readonly registry = new Map<string, ManagedProcessEntry>();
 
   constructor(options: RunProfileProcessManagerOptions = {}) {
@@ -106,6 +130,11 @@ export class RunProfileProcessManager {
     this.logBufferOptions = options.logBufferOptions ?? {};
     this.setTimeoutFn = options.setTimeoutFn ?? setTimeout;
     this.clearTimeoutFn = options.clearTimeoutFn ?? clearTimeout;
+    this.platform = options.platform ?? process.platform;
+    this.processKillFn =
+      options.processKill ??
+      ((pid, signal) => process.kill(pid, signal));
+    this.useProcessGroups = !isWindowsPlatform(this.platform);
   }
 
   start(input: RunProfileProcessStartInput): RunProfileManagedProcessSnapshot {
@@ -142,11 +171,11 @@ export class RunProfileProcessManager {
 
     this.registry.set(input.runProfileId, entry);
 
-    const child = this.spawnFn(input.command, [], {
-      cwd: input.workingDirectory,
-      shell: true,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const child = this.spawnFn(
+      input.command,
+      [],
+      buildManagedProcessSpawnOptions(input.workingDirectory, this.platform),
+    );
 
     entry.child = child;
     this.attachChildListeners(entry, child);
@@ -260,19 +289,45 @@ export class RunProfileProcessManager {
     });
   }
 
+  private killChildProcess(
+    child: ChildProcess,
+    signal: NodeJS.Signals,
+  ): void {
+    if (child.killed) {
+      return;
+    }
+
+    const pid = child.pid;
+    if (pid == null) {
+      child.kill(signal);
+      return;
+    }
+
+    if (this.useProcessGroups) {
+      try {
+        this.processKillFn(-pid, signal);
+        return;
+      } catch {
+        // Process group kill failed; fall back to the direct child.
+      }
+    }
+
+    child.kill(signal);
+  }
+
   private sendStopSignal(entry: ManagedProcessEntry): void {
     const child = entry.child;
     if (!child || child.killed) {
       return;
     }
 
-    child.kill("SIGTERM");
+    this.killChildProcess(child, "SIGTERM");
 
     this.clearStopGraceTimer(entry);
     entry.stopGraceTimer = this.setTimeoutFn(() => {
       entry.stopGraceTimer = null;
       if (entry.child && !entry.child.killed) {
-        entry.child.kill("SIGKILL");
+        this.killChildProcess(entry.child, "SIGKILL");
       }
     }, this.stopGraceMs);
   }
@@ -286,7 +341,7 @@ export class RunProfileProcessManager {
       child.removeAllListeners();
       child.stdout?.removeAllListeners();
       child.stderr?.removeAllListeners();
-      child.kill("SIGTERM");
+      this.killChildProcess(child, "SIGTERM");
     }
   }
 
@@ -298,7 +353,7 @@ export class RunProfileProcessManager {
       child.removeAllListeners();
       child.stdout?.removeAllListeners();
       child.stderr?.removeAllListeners();
-      child.kill("SIGTERM");
+      this.killChildProcess(child, "SIGTERM");
     }
 
     entry.child = null;
