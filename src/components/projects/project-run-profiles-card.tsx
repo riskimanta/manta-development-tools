@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteRunProfileButton } from "@/components/projects/delete-run-profile-button";
+import { RunProfileExecutionResultPanel } from "@/components/projects/run-profile-execution-result-panel";
 import { RunRunProfileButton } from "@/components/projects/run-run-profile-button";
 import { ProjectRunProfilesImport } from "@/components/projects/project-run-profiles-import";
 import {
@@ -28,6 +29,7 @@ import {
   type RunProfileFormValues,
 } from "@/components/projects/project-run-profile-form";
 import { COMMAND_EXECUTION_DISABLED_MESSAGE } from "@/lib/mandev-command-execution";
+import type { RunProfileExecutionResult } from "@/lib/run-profile-execution";
 import {
   buildRunProfileCdCommandCopy,
   buildRunProfileCommandCopy,
@@ -77,6 +79,10 @@ function RunProfileRow({
   commandExecutionEnabled: boolean;
   onEdit: (profile: RunProfileListItem) => void;
 }) {
+  const [lastRun, setLastRun] = useState<RunProfileExecutionResult | null>(
+    null,
+  );
+
   const copyInput = {
     command: profile.command,
     workingDirectory: profile.workingDirectory,
@@ -198,9 +204,18 @@ function RunProfileRow({
             profileName={profile.name}
             command={profile.command}
             workingDirectory={profile.workingDirectory}
+            onExecutionComplete={(result) => setLastRun(result)}
           />
         ) : null}
       </div>
+
+      {lastRun ? (
+        <RunProfileExecutionResultPanel
+          heading="Last run just now"
+          result={lastRun}
+          className="space-y-2 rounded-md border border-border/80 bg-muted/20 p-3 text-xs"
+        />
+      ) : null}
     </li>
   );
 }

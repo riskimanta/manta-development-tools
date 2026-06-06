@@ -1,102 +1,64 @@
 # ManDev — current state
 
-## Bug fix: Run button not appearing
+## Project summary
 
-### Root cause
+ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles.
 
-Phase 2A was documented in `RESULT.md` from a prior session, but **the implementation was never committed to `main`**. The wiring files did not exist on disk:
+## Feature implemented
 
-- `src/lib/mandev-command-execution.ts` — missing
-- `src/lib/run-profile-execution.ts` — missing
-- `src/components/projects/run-run-profile-button.tsx` — missing
-- `src/app/(app)/projects/[id]/page.tsx` — did not pass `commandExecutionEnabled`
-- `src/components/projects/project-run-profiles-card.tsx` — did not render Run buttons
+**Run Profile Last Result UI (Phase 2A)**
 
-Fixing `.env` alone could not help because the UI and server execution path were never present in the codebase.
+After a saved run profile is executed, the latest result now persists on the profile card for the remainder of the page session. Users can close the confirmation dialog and still see what happened under that profile.
 
-### Fix applied
+## UX problem solved
 
-Restored the full Phase 2A implementation:
+Previously, execution results appeared only inside the confirmation dialog and were cleared when the dialog closed. Users lost visibility into stdout/stderr, exit code, and status immediately after dismissing the dialog.
 
-1. **Env helper** — `isCommandExecutionEnabled()` reads `process.env.MANDEV_ENABLE_COMMAND_EXECUTION === "true"` (strict string match).
-2. **Project detail page** — server component calls the helper and passes `commandExecutionEnabled` to `ProjectRunProfilesCard`.
-3. **Run profiles card** — shows amber experimental banner when enabled; shows disabled helper when off; renders `RunRunProfileButton` per profile when enabled.
-4. **Execution stack** — `executeRunProfileCommand` (service) → `executeRunProfileAction` (server action) → `executeSavedRunProfileCommand` (spawn + validation).
+## Safety boundary
 
-### How env flag is read
+Unchanged from Phase 2A:
 
-```ts
-// src/lib/mandev-command-execution.ts
-process.env.MANDEV_ENABLE_COMMAND_EXECUTION === "true"
-```
+- Opt-in via `MANDEV_ENABLE_COMMAND_EXECUTION=true`
+- Only saved run profiles (by DB ID)
+- Confirmation dialog required before execution
+- No database persistence of results
+- No live log streaming
+- No process manager, stop, or restart
+- Long-running commands remain blocked until Phase 3
 
-Read on the **server** at render time in `src/app/(app)/projects/[id]/page.tsx`. Next.js loads `.env` automatically; restart `pnpm dev` after changing `.env`. Inline prefix (`MANDEV_ENABLE_COMMAND_EXECUTION=true pnpm dev`) also works.
+## UI behavior
 
-### Run button visibility
+- Each run profile row keeps `lastRun` in client-side React state (`useState`).
+- State resets on page refresh (no persistence).
+- After `executeRunProfileAction` completes, `RunRunProfileButton` calls `onExecutionComplete` and the parent row renders a **Last run just now** panel below the action buttons.
+- Panel shows: status badge (success / failed / blocked / timed_out / disabled), exit code when present, message, and scrollable stdout/stderr previews (max height ~7rem).
+- Confirmation dialog, toasts, copy buttons, and clipboard preview sections are unchanged.
+- Dialog still shows the inline result while open; closing the dialog clears dialog-local state only.
 
-| `MANDEV_ENABLE_COMMAND_EXECUTION` | UI |
-|---|---|
-| unset / not exactly `true` | Run buttons hidden; dashed helper text shown |
-| `true` | Amber banner + **Run** button on each profile card |
-
-Run buttons never appear when the flag is disabled.
-
-### Files changed
-
-- `src/lib/mandev-command-execution.ts` — env flag helper (new)
-- `src/lib/mandev-command-execution.test.ts` — helper tests (new)
-- `src/lib/run-profile-execution.ts` — spawn, validation, timeout (new)
-- `src/lib/run-profile-execution.test.ts` — execution tests (new)
-- `src/services/run-profiles.ts` — `executeRunProfileCommand`
-- `src/services/run-profiles.test.ts` — service tests
-- `src/app/projects/run-profiles/actions.ts` — `executeRunProfileAction`
-- `src/app/projects/run-profiles/actions.test.ts` — action tests
-- `src/components/projects/run-run-profile-button.tsx` — Run button + confirmation (new)
-- `src/components/projects/project-run-profiles-card.tsx` — conditional Run UI
-- `src/app/(app)/projects/[id]/page.tsx` — passes `commandExecutionEnabled`
-- `.env.example` — documents `MANDEV_ENABLE_COMMAND_EXECUTION`
-- `README.md` — local-only warning
-- `RESULT.md`
-
-### Schema changed
+## Schema changed
 
 No.
 
-### Test / lint / typecheck status
+## Files changed
+
+- `src/components/projects/run-profile-execution-result-panel.tsx` — shared result display (new)
+- `src/components/projects/run-run-profile-button.tsx` — `onExecutionComplete` callback; uses shared panel in dialog
+- `src/components/projects/project-run-profiles-card.tsx` — per-row last-run state and card panel
+- `RESULT.md`
+
+## Test / lint / typecheck status
 
 - `pnpm test`: Pass (278 tests)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass
 
-### Manual verification steps
+## Known limitations
 
-1. Ensure `.env` contains `MANDEV_ENABLE_COMMAND_EXECUTION=true` (one variable per line).
-2. Restart dev server: `pnpm dev` (or `MANDEV_ENABLE_COMMAND_EXECUTION=true pnpm dev`).
-3. Open a project with at least one run profile that has a working directory set.
-4. Confirm amber “Local command execution is enabled” banner appears.
-5. Confirm each profile card shows **Run** alongside copy buttons.
-6. Click **Run** → confirmation dialog → run a short command (e.g. `echo hello`).
-7. Remove or set flag to `false`, restart, confirm Run buttons are hidden and disabled helper text appears.
+- Last result is session-only; lost on refresh or navigation away
+- Timestamp is static (“Last run just now”), not a live relative clock
+- Long-running dev-server commands still blocked until Phase 3
+- No stop/restart or live logs
 
-## Feature: Project Run Profiles — Phase 2A
+## Recommended next step
 
-Saved run profiles can be executed from the project detail UI when explicitly enabled. Copy, import, and preview behavior unchanged.
-
-### Safety boundary
-
-- Opt-in only via env flag
-- Only saved `ProjectRunProfile` records (by ID from DB)
-- Confirmation dialog required
-- Blocks empty command, missing/invalid cwd, long-running patterns
-- 30s strict timeout for short commands
-- No process manager or log streaming (Phase 3)
-
-### Known limitations
-
-- Long-running dev-server commands blocked until Phase 3
-- No stop/restart for running processes
-- Execution runs on the ManDev server host
-
-### Recommended next step
-
-**Phase 3:** Process manager with long-running command support, live logs, and stop/restart.
+**Phase 3:** Process manager with long-running command support, live logs, stop/restart, and optional persisted run history.
