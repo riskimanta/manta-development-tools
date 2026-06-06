@@ -68,6 +68,7 @@ describe("RunProfileProcessManager", () => {
     manager = new RunProfileProcessManager({
       spawn: spawn as never,
       stopGraceMs: 100,
+      platform: "win32",
     });
   });
 
@@ -301,6 +302,118 @@ describe("RunProfileProcessManager", () => {
 
     await flushMicrotasks();
     expect(manager.getSnapshot("profile-1")?.pid).toBe(55_005);
+  });
+});
+
+describe("RunProfileProcessManager process group stop (POSIX)", () => {
+  let spawn: ReturnType<typeof vi.fn>;
+  let processKill: ReturnType<typeof vi.fn>;
+  let manager: RunProfileProcessManager;
+
+  const startInput = {
+    runProfileId: "profile-1",
+    command: "pnpm dev",
+    workingDirectory: "/tmp/project",
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    spawn = vi.fn(() => createMockChild());
+    processKill = vi.fn(() => true);
+    manager = new RunProfileProcessManager({
+      spawn: spawn as never,
+      stopGraceMs: 100,
+      platform: "linux",
+      processKill: processKill as (
+        pid: number,
+        signal?: NodeJS.Signals | number,
+      ) => boolean,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function latestChild(): MockChild {
+    return spawn.mock.results.at(-1)?.value as MockChild;
+  }
+
+  it("spawn uses detached mode for process-group-compatible execution", () => {
+    manager.start(startInput);
+
+    expect(spawn).toHaveBeenCalledWith("pnpm dev", [], {
+      cwd: "/tmp/project",
+      shell: true,
+      stdio: ["ignore", "pipe", "pipe"],
+      detached: true,
+    });
+  });
+
+  it("stop attempts process group kill on non-Windows", async () => {
+    manager.start(startInput);
+    const child = latestChild();
+    await flushMicrotasks();
+
+    manager.stop("profile-1");
+
+    expect(processKill).toHaveBeenCalledWith(-42_001, "SIGTERM");
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  it("stop escalates process group kill to SIGKILL after grace period", async () => {
+    manager.start(startInput);
+    const child = latestChild();
+    await flushMicrotasks();
+
+    manager.stop("profile-1");
+    vi.advanceTimersByTime(100);
+
+    expect(processKill).toHaveBeenCalledWith(-42_001, "SIGTERM");
+    expect(processKill).toHaveBeenCalledWith(-42_001, "SIGKILL");
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  it("stop falls back to direct child kill when process group kill fails", async () => {
+    processKill.mockImplementation(() => {
+      throw new Error("ESRCH");
+    });
+
+    manager.start(startInput);
+    const child = latestChild();
+    await flushMicrotasks();
+
+    manager.stop("profile-1");
+
+    expect(processKill).toHaveBeenCalledWith(-42_001, "SIGTERM");
+    expect(child.kill).toHaveBeenCalledWith("SIGTERM");
+  });
+
+  it("Windows path uses direct child kill without detached spawn", async () => {
+    const windowsManager = new RunProfileProcessManager({
+      spawn: spawn as never,
+      stopGraceMs: 100,
+      platform: "win32",
+      processKill: processKill as (
+        pid: number,
+        signal?: NodeJS.Signals | number,
+      ) => boolean,
+    });
+
+    windowsManager.start(startInput);
+    const child = latestChild();
+    await flushMicrotasks();
+
+    expect(spawn).toHaveBeenCalledWith("pnpm dev", [], {
+      cwd: "/tmp/project",
+      shell: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    windowsManager.stop("profile-1");
+
+    expect(processKill).not.toHaveBeenCalled();
+    expect(child.kill).toHaveBeenCalledWith("SIGTERM");
   });
 });
 
