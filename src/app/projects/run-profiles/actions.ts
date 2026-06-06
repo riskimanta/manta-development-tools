@@ -8,6 +8,7 @@ import {
 } from "@/lib/validations/run-profile";
 import { getProjectById } from "@/services/projects";
 import type { ManagedRunProfileActionResult } from "@/lib/run-profile-managed-action-types";
+import { getRunProfileProcessManagerBootSessionId } from "@/lib/run-profile-process-manager";
 import type { RunProfilesImportPreview } from "@/lib/run-profiles-import-preview";
 import type { RunProfileExecutionResult } from "@/lib/run-profile-execution";
 import {
@@ -160,6 +161,7 @@ function requireManagedRunProfileId(
       snapshot: null,
       message: "Run profile is required.",
       reason: "not_found",
+      processManagerBootSessionId: getRunProfileProcessManagerBootSessionId(),
     };
   }
   return null;

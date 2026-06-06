@@ -67,6 +67,7 @@ vi.mock("@/lib/run-profile-process-manager", () => ({
     getSnapshot: vi.fn(),
     listSnapshots: vi.fn(),
   },
+  getRunProfileProcessManagerBootSessionId: () => "test-boot-session-id",
 }));
 
 vi.mock("node:fs", () => ({
@@ -658,6 +659,7 @@ describe("startManagedRunProfile", () => {
       ok: true,
       snapshot: managedSnapshot,
       message: "Process is starting.",
+      processManagerBootSessionId: "test-boot-session-id",
     });
   });
 });
@@ -749,6 +751,7 @@ describe("getManagedRunProfileSnapshot", () => {
       ok: true,
       snapshot: managedSnapshot,
       message: "Process is starting.",
+      processManagerBootSessionId: "test-boot-session-id",
     });
   });
 
@@ -761,6 +764,7 @@ describe("getManagedRunProfileSnapshot", () => {
       ok: true,
       snapshot: null,
       message: "No managed process for this run profile.",
+      processManagerBootSessionId: "test-boot-session-id",
     });
   });
 });
@@ -783,6 +787,7 @@ describe("listManagedRunProfileSnapshots", () => {
       snapshot: null,
       snapshots: [managedSnapshot],
       message: "Found 1 managed process(es).",
+      processManagerBootSessionId: "test-boot-session-id",
     });
   });
 });

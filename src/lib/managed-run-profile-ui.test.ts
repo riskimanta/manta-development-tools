@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyManagedRunProfileBootSessionId,
   canRestartManagedRunProfile,
   canStartManagedRunProfile,
   canStopManagedRunProfile,
   managedRunProfileStatusLabel,
   resolveManagedRunProfileStatus,
   shouldPollManagedRunProfileSnapshot,
+  shouldShowManagedRunProfileStaleNotice,
 } from "./managed-run-profile-ui";
 
 describe("resolveManagedRunProfileStatus", () => {
@@ -67,5 +69,60 @@ describe("managedRunProfileStatusLabel", () => {
   it("maps known statuses to labels", () => {
     expect(managedRunProfileStatusLabel("running")).toBe("Running");
     expect(managedRunProfileStatusLabel("idle")).toBe("Idle");
+  });
+});
+
+describe("shouldShowManagedRunProfileStaleNotice", () => {
+  it("does not show on first boot session id", () => {
+    expect(shouldShowManagedRunProfileStaleNotice(null, "boot-a")).toBe(false);
+    expect(shouldShowManagedRunProfileStaleNotice(undefined, "boot-a")).toBe(
+      false,
+    );
+  });
+
+  it("does not show when boot session id is unchanged", () => {
+    expect(shouldShowManagedRunProfileStaleNotice("boot-a", "boot-a")).toBe(
+      false,
+    );
+  });
+
+  it("shows when boot session id changes after a prior value was seen", () => {
+    expect(shouldShowManagedRunProfileStaleNotice("boot-a", "boot-b")).toBe(
+      true,
+    );
+  });
+
+  it("does not show when next boot session id is missing", () => {
+    expect(shouldShowManagedRunProfileStaleNotice("boot-a", null)).toBe(false);
+    expect(shouldShowManagedRunProfileStaleNotice("boot-a", undefined)).toBe(
+      false,
+    );
+  });
+});
+
+describe("applyManagedRunProfileBootSessionId", () => {
+  it("stores the next boot session id and flags stale state on change", () => {
+    expect(
+      applyManagedRunProfileBootSessionId(null, "boot-a"),
+    ).toEqual({
+      bootSessionId: "boot-a",
+      showStaleNotice: false,
+    });
+
+    expect(
+      applyManagedRunProfileBootSessionId("boot-a", "boot-b"),
+    ).toEqual({
+      bootSessionId: "boot-b",
+      showStaleNotice: true,
+    });
+  });
+
+  it("keeps the previous boot session id when next is missing", () => {
+    expect(
+      applyManagedRunProfileBootSessionId("boot-a", undefined),
+    ).toEqual({
+      bootSessionId: "boot-a",
+      showStaleNotice: false,
+    });
   });
 });

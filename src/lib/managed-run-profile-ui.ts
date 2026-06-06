@@ -2,6 +2,36 @@ import type { RunProfileManagedProcessStatus } from "@/lib/run-profile-process-m
 
 export const MANAGED_RUN_PROFILE_POLL_MS = 1500;
 
+export const MANAGED_RUN_PROFILE_STALE_STATE_NOTICE =
+  "Managed process state was reset because the app server restarted. Start the profile again if needed.";
+
+export function shouldShowManagedRunProfileStaleNotice(
+  previousBootSessionId: string | null | undefined,
+  nextBootSessionId: string | null | undefined,
+): boolean {
+  if (!previousBootSessionId || !nextBootSessionId) {
+    return false;
+  }
+
+  return previousBootSessionId !== nextBootSessionId;
+}
+
+export function applyManagedRunProfileBootSessionId(
+  previousBootSessionId: string | null | undefined,
+  nextBootSessionId: string | null | undefined,
+): {
+  bootSessionId: string | null;
+  showStaleNotice: boolean;
+} {
+  return {
+    bootSessionId: nextBootSessionId ?? previousBootSessionId ?? null,
+    showStaleNotice: shouldShowManagedRunProfileStaleNotice(
+      previousBootSessionId,
+      nextBootSessionId,
+    ),
+  };
+}
+
 export function resolveManagedRunProfileStatus(
   status: RunProfileManagedProcessStatus | null | undefined,
 ): RunProfileManagedProcessStatus {
