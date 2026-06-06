@@ -387,7 +387,7 @@ export function listManagedRunProfileSnapshots(): ManagedRunProfileActionResult
 
 If persistence is needed later, prefer **DB for metadata only** (run id, profile id, startedAt, stoppedAt, exitCode, status) and **optional file tail** for large logs — not both full logs in DB.
 
-**Prisma schema:** unchanged in Phase 3A.
+**Prisma schema:** unchanged in Phase 3A. **Phase 3C foundation:** adds `ProjectRunProfileRun` for managed run metadata/history (no full logs in DB).
 
 ---
 
@@ -440,12 +440,20 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 ### Phase 3B (later)
 
 - [ ] SSE log streaming Route Handler
-- [ ] Persisted run history (metadata in DB, optional log files)
+- [x] Persisted run history foundation (`ProjectRunProfileRun` model; create on managed start, finalize on stop/exit/fail; no history UI yet)
 - [x] Unix process groups / improved tree kill (Phase 3B safe stop — `detached` spawn + `kill(-pid)` on POSIX, Windows unchanged)
 - [ ] Orphan detection (pidfile or startup scan)
 - [x] App/server restart stale-state notice (`processManagerBootSessionId` + managed UI banner)
 - [ ] Bind-address exposure warning automation
 - [ ] Clear separation UI: "Run once" (30s) vs "Start server" (managed)
+
+### Phase 3C foundation (implemented)
+
+- **Model:** `ProjectRunProfileRun` linked to `ProjectRunProfile` (cascade delete).
+- **Fields:** status, command, workingDirectory, pid, startedAt, endedAt, exitCode, signal, durationMs, stdoutPreview, stderrPreview.
+- **Service:** `src/services/run-profile-run-history.ts` — `createRunProfileRunForManagedStart`, `updateRunProfileRunOnSpawn`, `finalizeRunProfileRunFromSnapshot`, `listRunProfileRuns`, `getLatestRunProfileRun`.
+- **Integration:** managed start/restart create a row; process-manager lifecycle callbacks (`spawn`, `error`, `close`) update/finalize via service layer (no Prisma in process manager).
+- **Limitations:** live process state remains in-memory; orphaned `running` rows may remain if ManDev restarts mid-run; full history UI deferred.
 
 ---
 

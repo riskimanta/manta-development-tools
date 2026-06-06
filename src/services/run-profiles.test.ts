@@ -21,6 +21,7 @@ import {
   stopManagedRunProfile,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
+import { createRunProfileRunForManagedStart } from "@/services/run-profile-run-history";
 
 vi.mock("@/lib/mandev-command-execution", () => ({
   isCommandExecutionEnabled: vi.fn(),
@@ -66,8 +67,21 @@ vi.mock("@/lib/run-profile-process-manager", () => ({
     restart: vi.fn(),
     getSnapshot: vi.fn(),
     listSnapshots: vi.fn(),
+    setLifecycleHandler: vi.fn(),
   },
   getRunProfileProcessManagerBootSessionId: () => "test-boot-session-id",
+  isManagedProcessStartAccepted: vi.fn(
+    (snapshot: { message: string }) =>
+      !snapshot.message.startsWith("Process is already"),
+  ),
+}));
+
+vi.mock("@/services/run-profile-run-history", () => ({
+  createRunProfileRunForManagedStart: vi.fn(),
+  finalizeRunProfileRunFromSnapshot: vi.fn(),
+  updateRunProfileRunOnSpawn: vi.fn(),
+  listRunProfileRuns: vi.fn(),
+  getLatestRunProfileRun: vi.fn(),
 }));
 
 vi.mock("node:fs", () => ({
@@ -655,6 +669,9 @@ describe("startManagedRunProfile", () => {
       command: "pnpm dev",
       workingDirectory: "/Users/dev/app",
     });
+    expect(createRunProfileRunForManagedStart).toHaveBeenCalledWith(
+      managedSnapshot,
+    );
     expect(result).toEqual({
       ok: true,
       snapshot: managedSnapshot,
@@ -730,6 +747,9 @@ describe("restartManagedRunProfile", () => {
       command: "pnpm dev",
       workingDirectory: "/Users/dev/app",
     });
+    expect(createRunProfileRunForManagedStart).toHaveBeenCalledWith(
+      managedSnapshot,
+    );
     expect(result.ok).toBe(true);
   });
 });
