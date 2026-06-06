@@ -16,6 +16,7 @@ import type {
   ManagedRunProfileActionResult,
 } from "@/lib/run-profile-managed-action-types";
 import {
+  getRunProfileProcessManagerBootSessionId,
   runProfileProcessManager,
 } from "@/lib/run-profile-process-manager";
 import { readRunProfilesImportFromLocalPath } from "@/lib/local-run-profiles-import";
@@ -102,12 +103,12 @@ function validationFailureToManagedResult(
     reason = "not_directory";
   }
 
-  return {
+  return withProcessManagerBootSessionId({
     ok: false,
     snapshot: null,
     message: validation.message,
     reason,
-  };
+  });
 }
 
 function validateSavedProfileForManagedExecution(
@@ -128,13 +129,32 @@ function validateSavedProfileForManagedExecution(
   return validationFailureToManagedResult(validation, profile, fsAccess);
 }
 
-function disabledManagedResult(): ManagedRunProfileActionResult {
+type ManagedRunProfileActionResultWithoutBootSessionId =
+  | Omit<
+      Extract<ManagedRunProfileActionResult, { ok: true }>,
+      "processManagerBootSessionId"
+    >
+  | Omit<
+      Extract<ManagedRunProfileActionResult, { ok: false }>,
+      "processManagerBootSessionId"
+    >;
+
+function withProcessManagerBootSessionId(
+  result: ManagedRunProfileActionResultWithoutBootSessionId,
+): ManagedRunProfileActionResult {
   return {
+    ...result,
+    processManagerBootSessionId: getRunProfileProcessManagerBootSessionId(),
+  };
+}
+
+function disabledManagedResult(): ManagedRunProfileActionResult {
+  return withProcessManagerBootSessionId({
     ok: false,
     snapshot: null,
     message: COMMAND_EXECUTION_DISABLED_MESSAGE,
     reason: "disabled",
-  };
+  });
 }
 
 export function resolveRunProfileWorkingDirectory(
@@ -208,12 +228,12 @@ export async function startManagedRunProfile(
 
   const profile = await getRunProfileById(runProfileId);
   if (!profile) {
-    return {
+    return withProcessManagerBootSessionId({
       ok: false,
       snapshot: null,
       message: "Run profile not found",
       reason: "not_found",
-    };
+    });
   }
 
   const validationFailure = validateSavedProfileForManagedExecution(profile);
@@ -227,11 +247,11 @@ export async function startManagedRunProfile(
     workingDirectory: profile.workingDirectory!.trim(),
   });
 
-  return {
+  return withProcessManagerBootSessionId({
     ok: true,
     snapshot,
     message: snapshot.message,
-  };
+  });
 }
 
 export async function stopManagedRunProfile(
@@ -243,19 +263,19 @@ export async function stopManagedRunProfile(
 
   const snapshot = runProfileProcessManager.stop(runProfileId);
   if (!snapshot) {
-    return {
+    return withProcessManagerBootSessionId({
       ok: false,
       snapshot: null,
       message: "No managed process found for this run profile.",
       reason: "manager_error",
-    };
+    });
   }
 
-  return {
+  return withProcessManagerBootSessionId({
     ok: true,
     snapshot,
     message: snapshot.message,
-  };
+  });
 }
 
 export async function restartManagedRunProfile(
@@ -267,12 +287,12 @@ export async function restartManagedRunProfile(
 
   const profile = await getRunProfileById(runProfileId);
   if (!profile) {
-    return {
+    return withProcessManagerBootSessionId({
       ok: false,
       snapshot: null,
       message: "Run profile not found",
       reason: "not_found",
-    };
+    });
   }
 
   const validationFailure = validateSavedProfileForManagedExecution(profile);
@@ -286,11 +306,11 @@ export async function restartManagedRunProfile(
     workingDirectory: profile.workingDirectory!.trim(),
   });
 
-  return {
+  return withProcessManagerBootSessionId({
     ok: true,
     snapshot,
     message: snapshot.message,
-  };
+  });
 }
 
 export function getManagedRunProfileSnapshot(
@@ -298,19 +318,19 @@ export function getManagedRunProfileSnapshot(
 ): ManagedRunProfileActionResult {
   const snapshot = runProfileProcessManager.getSnapshot(runProfileId);
 
-  return {
+  return withProcessManagerBootSessionId({
     ok: true,
     snapshot,
     message: snapshot
       ? snapshot.message
       : "No managed process for this run profile.",
-  };
+  });
 }
 
 export function listManagedRunProfileSnapshots(): ManagedRunProfileActionResult {
   const snapshots = runProfileProcessManager.listSnapshots();
 
-  return {
+  return withProcessManagerBootSessionId({
     ok: true,
     snapshot: null,
     snapshots,
@@ -318,7 +338,7 @@ export function listManagedRunProfileSnapshots(): ManagedRunProfileActionResult 
       snapshots.length === 0
         ? "No managed processes are currently registered."
         : `Found ${snapshots.length} managed process(es).`,
-  };
+  });
 }
 
 export async function createRunProfileRecord(

@@ -1,4 +1,5 @@
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from "node:child_process";
+import { randomUUID } from "node:crypto";
 
 import {
   RunProfileLogBuffer,
@@ -7,6 +8,13 @@ import {
 } from "./run-profile-log-buffer";
 
 export const RUN_PROFILE_PROCESS_STOP_GRACE_MS = 5_000;
+
+/** Changes when the Node.js server process reloads (e.g. dev restart). */
+export const RUN_PROFILE_PROCESS_MANAGER_BOOT_SESSION_ID = randomUUID();
+
+export function getRunProfileProcessManagerBootSessionId(): string {
+  return RUN_PROFILE_PROCESS_MANAGER_BOOT_SESSION_ID;
+}
 
 export type RunProfileManagedProcessStatus =
   | "idle"

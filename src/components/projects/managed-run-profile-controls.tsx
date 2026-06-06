@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Play, RotateCw, Square } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,10 +22,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  applyManagedRunProfileBootSessionId,
   canRestartManagedRunProfile,
   canStartManagedRunProfile,
   canStopManagedRunProfile,
   MANAGED_RUN_PROFILE_POLL_MS,
+  MANAGED_RUN_PROFILE_STALE_STATE_NOTICE,
   managedRunProfileStatusLabel,
   managedRunProfileStatusVariant,
   resolveManagedRunProfileStatus,
@@ -206,9 +208,23 @@ export function ManagedRunProfileControls({
   const [snapshot, setSnapshot] =
     useState<RunProfileManagedProcessSnapshot | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [showStaleStateNotice, setShowStaleStateNotice] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
   const [restartOpen, setRestartOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const bootSessionIdRef = useRef<string | null>(null);
+
+  function applyBootSessionId(nextBootSessionId: string | undefined) {
+    const { bootSessionId, showStaleNotice } = applyManagedRunProfileBootSessionId(
+      bootSessionIdRef.current,
+      nextBootSessionId,
+    );
+
+    bootSessionIdRef.current = bootSessionId;
+    if (showStaleNotice) {
+      setShowStaleStateNotice(true);
+    }
+  }
 
   const status = resolveManagedRunProfileStatus(snapshot?.status);
   const canStart = canStartManagedRunProfile(status);
@@ -226,11 +242,13 @@ export function ManagedRunProfileControls({
       }
 
       if (result.ok) {
+        applyBootSessionId(result.processManagerBootSessionId);
         setSnapshot(result.snapshot ?? null);
         if (result.snapshot?.message) {
           setActionMessage(result.snapshot.message);
         }
       } else {
+        applyBootSessionId(result.processManagerBootSessionId);
         setActionMessage(result.message);
       }
     }
@@ -257,6 +275,8 @@ export function ManagedRunProfileControls({
     result: ManagedRunProfileActionResult,
     successToast?: "success" | "message",
   ) {
+    applyBootSessionId(result.processManagerBootSessionId);
+
     if (result.ok) {
       setSnapshot(result.snapshot ?? null);
       setActionMessage(result.message);
@@ -316,6 +336,12 @@ export function ManagedRunProfileControls({
       <p className="text-[10px] text-muted-foreground">
         Long-running local process control — experimental, in-memory only.
       </p>
+
+      {showStaleStateNotice ? (
+        <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-100/90">
+          {MANAGED_RUN_PROFILE_STALE_STATE_NOTICE}
+        </p>
+      ) : null}
 
       {snapshot ? (
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">

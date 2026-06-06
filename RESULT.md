@@ -1,19 +1,29 @@
-# ManDev — Run Profiles Phase 3B (safe stop)
+# ManDev — Run Profiles Phase 3B (stale managed process notice)
 
 ## What changed
 
-**`src/lib/run-profile-process-manager.ts`** — POSIX managed processes spawn with `detached: true` so the shell leads a process group. Stop, restart force-stop, and dispose prefer `process.kill(-pid, signal)` on macOS/Linux, falling back to direct `child.kill` when group kill fails. Windows behavior is unchanged (no `detached`, direct child kill only).
+**`src/lib/run-profile-process-manager.ts`** — Added module-level `RUN_PROFILE_PROCESS_MANAGER_BOOT_SESSION_ID` (UUID at server boot) and `getRunProfileProcessManagerBootSessionId()`.
 
-**`src/lib/run-profile-process-manager.test.ts`** — Added POSIX spawn/stop tests (process-group kill, SIGKILL escalation, fallback, Windows path). Existing tests pin `platform: "win32"` to preserve prior expectations.
+**`src/lib/run-profile-managed-action-types.ts`** — `ManagedRunProfileActionResult` now includes `processManagerBootSessionId` on success and failure.
 
-**`docs/features/run-profiles-phase-3.md`** — Documented Phase 3B safe-stop behavior and marked Unix process-group item done.
+**`src/services/run-profiles.ts`** — All managed run profile service returns attach the current boot session id via `withProcessManagerBootSessionId`.
 
-## Public API / UI
+**`src/app/projects/run-profiles/actions.ts`** — Early validation responses include `processManagerBootSessionId`.
 
-Unchanged. No DB schema or UI changes.
+**`src/lib/managed-run-profile-ui.ts`** — Added stale-state notice copy and helpers (`shouldShowManagedRunProfileStaleNotice`, `applyManagedRunProfileBootSessionId`).
+
+**`src/components/projects/managed-run-profile-controls.tsx`** — Tracks boot session id from action responses; shows an informational amber banner when the id changes after a prior value was seen.
+
+**Tests** — Updated service/action expectations; added UI helper and boot session id unit tests.
+
+**`docs/features/run-profiles-phase-3.md`** — Documented boot session id and stale-state notice.
+
+## Public API
+
+Managed run profile Server Action results now include `processManagerBootSessionId: string`. No DB or Phase 2A changes.
 
 ## Test / lint / typecheck status
 
-- `pnpm test`: Pass (343 tests)
+- `pnpm test`: Pass (350 tests)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass

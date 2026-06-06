@@ -15,6 +15,7 @@ export type ManagedRunProfileActionResult =
       snapshot: RunProfileManagedProcessSnapshot | null;
       snapshots?: RunProfileManagedProcessSnapshot[];
       message: string;
+      processManagerBootSessionId: string;
     }
   | {
       ok: false;
@@ -22,4 +23,5 @@ export type ManagedRunProfileActionResult =
       snapshots?: RunProfileManagedProcessSnapshot[];
       message: string;
       reason: ManagedRunProfileActionFailureReason;
+      processManagerBootSessionId: string;
     };

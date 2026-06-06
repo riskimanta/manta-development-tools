@@ -424,4 +424,18 @@ describe("runProfileProcessManager singleton", () => {
     );
     expect(runProfileProcessManager).toBeInstanceOf(RunProfileProcessManager);
   });
+
+  it("exposes a stable boot session id for the server process", async () => {
+    const {
+      getRunProfileProcessManagerBootSessionId,
+      RUN_PROFILE_PROCESS_MANAGER_BOOT_SESSION_ID,
+    } = await import("./run-profile-process-manager");
+
+    expect(getRunProfileProcessManagerBootSessionId()).toBe(
+      RUN_PROFILE_PROCESS_MANAGER_BOOT_SESSION_ID,
+    );
+    expect(getRunProfileProcessManagerBootSessionId()).toMatch(
+      /^[0-9a-f-]{36}$/i,
+    );
+  });
 });

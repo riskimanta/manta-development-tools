@@ -29,6 +29,7 @@ import {
   stopManagedRunProfileAction,
   updateRunProfile,
 } from "./actions";
+import type { ManagedRunProfileActionResult } from "@/lib/run-profile-managed-action-types";
 
 vi.mock("@/services/run-profiles", () => ({
   createRunProfileRecord: vi.fn(),
@@ -312,6 +313,18 @@ const managedSnapshot = {
   },
 };
 
+function managedActionSuccess(
+  overrides: Partial<Extract<ManagedRunProfileActionResult, { ok: true }>> = {},
+): ManagedRunProfileActionResult {
+  return {
+    ok: true,
+    snapshot: managedSnapshot,
+    message: "Process is running.",
+    processManagerBootSessionId: "test-boot-session-id",
+    ...overrides,
+  };
+}
+
 describe("startManagedRunProfileAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -325,16 +338,13 @@ describe("startManagedRunProfileAction", () => {
       snapshot: null,
       message: "Run profile is required.",
       reason: "not_found",
+      processManagerBootSessionId: expect.any(String),
     });
     expect(startManagedRunProfile).not.toHaveBeenCalled();
   });
 
   it("delegates to service and returns result", async () => {
-    vi.mocked(startManagedRunProfile).mockResolvedValue({
-      ok: true,
-      snapshot: managedSnapshot,
-      message: "Process is running.",
-    });
+    vi.mocked(startManagedRunProfile).mockResolvedValue(managedActionSuccess());
 
     const result = await startManagedRunProfileAction("rp-1");
 
@@ -359,11 +369,7 @@ describe("stopManagedRunProfileAction", () => {
   });
 
   it("delegates to service and returns result", async () => {
-    vi.mocked(stopManagedRunProfile).mockResolvedValue({
-      ok: true,
-      snapshot: managedSnapshot,
-      message: "Process is running.",
-    });
+    vi.mocked(stopManagedRunProfile).mockResolvedValue(managedActionSuccess());
 
     const result = await stopManagedRunProfileAction("rp-1");
 
@@ -378,11 +384,9 @@ describe("restartManagedRunProfileAction", () => {
   });
 
   it("delegates to service and returns result", async () => {
-    vi.mocked(restartManagedRunProfile).mockResolvedValue({
-      ok: true,
-      snapshot: managedSnapshot,
-      message: "Process is starting.",
-    });
+    vi.mocked(restartManagedRunProfile).mockResolvedValue(
+      managedActionSuccess({ message: "Process is starting." }),
+    );
 
     const result = await restartManagedRunProfileAction("rp-1");
 
@@ -397,11 +401,9 @@ describe("getManagedRunProfileSnapshotAction", () => {
   });
 
   it("delegates to service and returns snapshot", async () => {
-    vi.mocked(getManagedRunProfileSnapshot).mockReturnValue({
-      ok: true,
-      snapshot: managedSnapshot,
-      message: "Process is running.",
-    });
+    vi.mocked(getManagedRunProfileSnapshot).mockReturnValue(
+      managedActionSuccess(),
+    );
 
     const result = await getManagedRunProfileSnapshotAction("rp-1");
 
@@ -416,12 +418,13 @@ describe("listManagedRunProfileSnapshotsAction", () => {
   });
 
   it("delegates to service and returns snapshots", async () => {
-    vi.mocked(listManagedRunProfileSnapshots).mockReturnValue({
-      ok: true,
-      snapshot: null,
-      snapshots: [managedSnapshot],
-      message: "Found 1 managed process(es).",
-    });
+    vi.mocked(listManagedRunProfileSnapshots).mockReturnValue(
+      managedActionSuccess({
+        snapshot: null,
+        snapshots: [managedSnapshot],
+        message: "Found 1 managed process(es).",
+      }),
+    );
 
     const result = await listManagedRunProfileSnapshotsAction();
 

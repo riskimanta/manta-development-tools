@@ -337,8 +337,8 @@ Extend **Project Detail → Run Profiles card** (`project-run-profiles-card.tsx`
 | `startManagedRunProfileAction(profileId)` | `ManagedRunProfileActionResult` |
 | `stopManagedRunProfileAction(profileId)` | `ManagedRunProfileActionResult` |
 | `restartManagedRunProfileAction(profileId)` | `ManagedRunProfileActionResult` |
-| `getManagedRunProfileSnapshotAction(profileId)` | `ManagedRunProfileActionResult` (snapshot includes status + logs) |
-| `listManagedRunProfileSnapshotsAction()` | `ManagedRunProfileActionResult` (`snapshots` array) |
+| `getManagedRunProfileSnapshotAction(profileId)` | `ManagedRunProfileActionResult` (snapshot includes status + logs; `processManagerBootSessionId` identifies server boot) |
+| `listManagedRunProfileSnapshotsAction()` | `ManagedRunProfileActionResult` (`snapshots` array; includes `processManagerBootSessionId`) |
 
 **Not yet implemented:** separate status/logs actions, `clearManagedRunProfileLogsAction`, SSE route. Phase 3A UI will poll `getManagedRunProfileSnapshotAction` (logs embedded in snapshot).
 
@@ -348,8 +348,8 @@ Existing `executeRunProfileAction` **unchanged** for short commands.
 
 ```typescript
 export type ManagedRunProfileActionResult =
-  | { ok: true; snapshot: RunProfileManagedProcessSnapshot | null; snapshots?: RunProfileManagedProcessSnapshot[]; message: string }
-  | { ok: false; snapshot?: RunProfileManagedProcessSnapshot | null; snapshots?: RunProfileManagedProcessSnapshot[]; message: string; reason: "disabled" | "not_found" | "invalid_command" | "missing_working_directory" | "invalid_working_directory" | "not_directory" | "manager_error" };
+  | { ok: true; snapshot: RunProfileManagedProcessSnapshot | null; snapshots?: RunProfileManagedProcessSnapshot[]; message: string; processManagerBootSessionId: string }
+  | { ok: false; snapshot?: RunProfileManagedProcessSnapshot | null; snapshots?: RunProfileManagedProcessSnapshot[]; message: string; reason: "disabled" | "not_found" | "invalid_command" | "missing_working_directory" | "invalid_working_directory" | "not_directory" | "manager_error"; processManagerBootSessionId: string };
 
 export function startManagedRunProfile(profileId: string): Promise<ManagedRunProfileActionResult>
 export function stopManagedRunProfile(profileId: string): Promise<ManagedRunProfileActionResult>
@@ -395,7 +395,7 @@ If persistence is needed later, prefer **DB for metadata only** (run id, profile
 
 | Case | Handling |
 |------|----------|
-| **ManDev server restart** | In-memory registry empty; UI shows `idle`; **orphan OS processes may keep running** — document; user must kill manually or via port conflict discovery. Phase 3B: optional startup pidfile scan. |
+| **ManDev server restart** | In-memory registry empty; UI shows `idle`; **orphan OS processes may keep running** — document; user must kill manually or via port conflict discovery. Phase 3B: optional startup pidfile scan. **Implemented (3B):** managed UI compares `processManagerBootSessionId` from Server Actions; when it changes after a prior value was seen, an informational amber notice explains that managed state was reset. |
 | **Orphaned processes** | MVP does not reconcile PIDs after restart; warn in docs and UI footer |
 | **Port conflicts** | Command fails or hangs; stderr shows "address already in use"; status → `failed` or `exited` with non-zero code |
 | **Command exits immediately** | `starting` → quick `exited`/`failed`; logs still shown |
@@ -443,6 +443,7 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 - [ ] Persisted run history (metadata in DB, optional log files)
 - [x] Unix process groups / improved tree kill (Phase 3B safe stop — `detached` spawn + `kill(-pid)` on POSIX, Windows unchanged)
 - [ ] Orphan detection (pidfile or startup scan)
+- [x] App/server restart stale-state notice (`processManagerBootSessionId` + managed UI banner)
 - [ ] Bind-address exposure warning automation
 - [ ] Clear separation UI: "Run once" (30s) vs "Start server" (managed)
 
