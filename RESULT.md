@@ -2,63 +2,44 @@
 
 ## Project summary
 
-ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles.
+ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Run profile execution (Phase 2A) supports opt-in short commands with session-only last-run UI; long-running dev servers remain blocked until Phase 3 is implemented.
 
-## Feature implemented
+## What document was added
 
-**Run Profile Last Result UI (Phase 2A)**
+**`docs/features/run-profiles-phase-3.md`** — design specification for Project Run Profiles Phase 3: Process Manager with Logs, Stop, and Restart. Covers architecture, safety, lifecycle, log delivery comparison, UI/backend modules, persistence decision, edge cases, testing, MVP scope (3A vs 3B), acceptance criteria, and risks.
 
-After a saved run profile is executed, the latest result now persists on the profile card for the remainder of the page session. Users can close the confirmation dialog and still see what happened under that profile.
+Also updated:
 
-## UX problem solved
+- `docs/features/index.md` — index row for Phase 3 design doc
+- `docs/features/path-map.md` — run profile implementation paths mapped to Phase 3 doc
 
-Previously, execution results appeared only inside the confirmation dialog and were cleared when the dialog closed. Users lost visibility into stdout/stderr, exit code, and status immediately after dismissing the dialog.
+## Key recommendation for Phase 3 architecture
 
-## Safety boundary
-
-Unchanged from Phase 2A:
-
-- Opt-in via `MANDEV_ENABLE_COMMAND_EXECUTION=true`
-- Only saved run profiles (by DB ID)
-- Confirmation dialog required before execution
-- No database persistence of results
-- No live log streaming
-- No process manager, stop, or restart
-- Long-running commands remain blocked until Phase 3
-
-## UI behavior
-
-- Each run profile row keeps `lastRun` in client-side React state (`useState`).
-- State resets on page refresh (no persistence).
-- After `executeRunProfileAction` completes, `RunRunProfileButton` calls `onExecutionComplete` and the parent row renders a **Last run just now** panel below the action buttons.
-- Panel shows: status badge (success / failed / blocked / timed_out / disabled), exit code when present, message, and scrollable stdout/stderr previews (max height ~7rem).
-- Confirmation dialog, toasts, copy buttons, and clipboard preview sections are unchanged.
-- Dialog still shows the inline result while open; closing the dialog clears dialog-local state only.
-
-## Schema changed
-
-No.
+Use an **in-memory process registry singleton** (`src/lib/run-profile-process-manager.ts`) keyed by `runProfileId`, with **bounded stdout/stderr ring buffers** (`src/lib/run-profile-log-buffer.ts`), and **polling via Server Actions** for Phase 3A MVP (1–2s interval). Defer SSE streaming, DB run history, and process-group orphan cleanup to Phase 3B. Keep Phase 2A short-command execution (`executeRunProfileAction`, 30s timeout) as a separate path; only the managed start path bypasses the long-running command block.
 
 ## Files changed
 
-- `src/components/projects/run-profile-execution-result-panel.tsx` — shared result display (new)
-- `src/components/projects/run-run-profile-button.tsx` — `onExecutionComplete` callback; uses shared panel in dialog
-- `src/components/projects/project-run-profiles-card.tsx` — per-row last-run state and card panel
-- `RESULT.md`
+- `docs/features/run-profiles-phase-3.md` — new design specification
+- `docs/features/index.md` — feature index entry
+- `docs/features/path-map.md` — path mapping for run profile modules
+- `RESULT.md` — this report
+
+## Whether code behavior changed
+
+**No.** Documentation-only task; no Phase 3 implementation.
 
 ## Test / lint / typecheck status
 
-- `pnpm test`: Pass (278 tests)
+- `pnpm test`: Not re-run (docs-only; no code changes; existing suite unaffected)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass
 
-## Known limitations
+## Known limitations (unchanged in code)
 
-- Last result is session-only; lost on refresh or navigation away
-- Timestamp is static (“Last run just now”), not a live relative clock
-- Long-running dev-server commands still blocked until Phase 3
-- No stop/restart or live logs
+- Phase 2A: short commands only; long-running patterns blocked
+- Last run result is session-only on the profile card
+- No live logs, stop, restart, or persistent process tracking
 
 ## Recommended next step
 
-**Phase 3:** Process manager with long-running command support, live logs, stop/restart, and optional persisted run history.
+Implement **Phase 3A** per the design doc: process manager + log buffer + Server Actions (start/stop/restart/status/logs) + polled logs UI on the Run Profiles card. Write unit tests for buffer and manager (mocked `child_process`) before production code.

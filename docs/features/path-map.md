@@ -10,3 +10,4 @@ Use this file when assessing **feature-doc-impact** after code changes.
 | `src/app/(app)/projects/**`, `src/app/projects/actions.ts`, `src/services/projects.ts` | [dashboard-hub.md](./dashboard-hub.md) |
 | `src/app/(app)/features/**`, `src/app/features/actions.ts`, `src/services/features.ts` | [dashboard-hub.md](./dashboard-hub.md) |
 | `prisma/schema.prisma` | All data-backed features |
+| `src/app/projects/run-profiles/**`, `src/services/run-profiles.ts`, `src/lib/run-profile-*.ts`, `src/components/projects/*run-profile*` | [run-profiles-phase-3.md](./run-profiles-phase-3.md) (Phase 3); Phase 2A behavior in code |
