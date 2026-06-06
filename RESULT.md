@@ -2,45 +2,73 @@
 
 ## Project summary
 
-ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Phase 2A provides opt-in short-command execution with session-only last-run UI. Phase 3 (process manager, live logs, stop/restart) is in progress.
+ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Phase 2A provides opt-in short-command execution with session-only last-run UI. Phase 3 adds an in-memory process manager skeleton for long-running profiles (not yet wired to the UI).
 
 ## Feature implemented
 
-**Run Profiles Phase 3A Foundation: Bounded Log Buffer**
+**Run Profiles Phase 3A Skeleton: In-memory Process Manager**
 
-A small, well-tested utility for storing recent stdout/stderr from managed run profiles without unbounded memory growth. This is the first building block for the Phase 3 process manager; it does not spawn processes or change the UI.
+Internal module to start, track, stop, and restart managed local processes for saved run profiles. Captures stdout/stderr into `RunProfileLogBuffer` and returns serializable snapshots for future Server Actions and UI polling.
 
-## Why this is Phase 3A foundation
+## Why this is Phase 3A skeleton
 
-The Phase 3 design (`docs/features/run-profiles-phase-3.md`) calls for in-memory process tracking with bounded log buffers and polling via Server Actions. The process manager (next task) will attach `child_process` stdout/stderr handlers to `RunProfileLogBuffer`; Server Actions will return `snapshot()` DTOs to the UI. Implementing the buffer in isolation keeps this PR focused, fully testable, and free of execution/UI risk.
+Phase 3 requires a process registry before Server Actions or UI can expose long-running dev servers. This module implements lifecycle management and log capture in isolation — fully unit-tested with mocked `spawn`, with no changes to Phase 2A execution, no env gating here, and no user-facing behavior yet.
 
 ## Files changed
 
-- `src/lib/run-profile-log-buffer.ts` — `RunProfileLogBuffer` class and types (new)
-- `src/lib/run-profile-log-buffer.test.ts` — unit tests (new)
-- `docs/features/run-profiles-phase-3.md` — aligned log buffer API/defaults with implementation
+- `src/lib/run-profile-process-manager.ts` — manager class + `runProfileProcessManager` singleton (new)
+- `src/lib/run-profile-process-manager.test.ts` — 16 unit tests with mocked spawn (new)
+- `docs/features/run-profiles-phase-3.md` — aligned registry/API docs with implementation
 - `RESULT.md` — this report
 
-## Log buffer behavior
+## Process manager API
 
-- **Default limit:** 64 KB (65536 characters) per stream (`RUN_PROFILE_LOG_BUFFER_DEFAULT_MAX_CHARS`)
-- **API:** `appendStdout`, `appendStderr`, `snapshot()`, `clear()`
-- **Truncation:** When a stream exceeds the limit, older content is dropped; the tail is kept; `stdoutTruncated` / `stderrTruncated` flags are set (sticky until `clear()`)
-- **Order:** Appends preserve chronological order within each stream
-- **Chunks:** Handles many small chunks, single oversized chunks, and newline-containing text
-- **Guards:** Empty strings and non-string chunks are ignored
-- **Serializable:** `RunProfileLogSnapshot` is plain strings and booleans for future Server Action responses
+| Method | Behavior |
+|--------|----------|
+| `start({ runProfileId, command, workingDirectory })` | Spawns child; returns snapshot (`starting` → `running` on `spawn` event) |
+| `stop(runProfileId)` | SIGTERM → grace (`RUN_PROFILE_PROCESS_STOP_GRACE_MS`, 5s) → SIGKILL; `null` if unknown |
+| `restart(input)` | Force-stops active process, clears logs, starts fresh |
+| `getSnapshot(runProfileId)` | Snapshot or `null` |
+| `listSnapshots()` | All registry entries |
+| `clear(runProfileId)` | Removes entry and disposes child |
 
-## Whether code behavior changed in the app UI
+Export: `runProfileProcessManager` singleton; tests use `new RunProfileProcessManager({ spawn, stopGraceMs, logBufferOptions })`.
 
-**No.** No process manager, Server Actions, command execution changes, or UI updates. Run profile behavior remains Phase 2A only.
+## Lifecycle behavior
+
+- **starting** → **running** on child `spawn` (pid set)
+- **running** → **exited** (code 0) or **failed** (non-zero / error) on `close` / `error`
+- **stop** → **stopping** → **stopped** on `close` (user-initiated)
+- **restart** clears log buffer and replaces the registry entry; active child receives SIGTERM and listeners are removed before a new spawn
+- Duplicate start while **starting** / **running** / **stopping** blocked with explanatory message
+
+Spawn options: `shell: true`, `cwd: workingDirectory`, `stdio: ["ignore", "pipe", "pipe"]`.
+
+## Safety boundary
+
+- No `MANDEV_ENABLE_COMMAND_EXECUTION` check in this module (service/action layer later)
+- No Prisma / DB validation
+- Phase 2A `executeRunProfileAction` unchanged; long-running commands still blocked on the Run button
+- Not connected to UI or Server Actions
+
+## Whether app behavior changed
+
+**No.** Internal library only; no routes, UI, schema, or Phase 2A execution changes.
 
 ## Test / lint / typecheck status
 
-- `pnpm test`: Pass
+- `pnpm test`: Pass (308 tests)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass
 
+## Known limitations
+
+- In-memory only — registry lost on ManDev server restart; possible orphan OS processes
+- Restart uses SIGTERM on old child without waiting for graceful shutdown before new spawn
+- Stop kills direct child only (no process-group / tree kill)
+- No `processRunId` or persisted run history
+- Windows tree-kill not addressed
+
 ## Recommended next step
 
-Implement **`src/lib/run-profile-process-manager.ts`** with mocked-spawn unit tests: in-memory registry keyed by `runProfileId`, start/stop lifecycle stubs that wire stdout/stderr into `RunProfileLogBuffer`, without enabling long-running commands in the UI yet.
+Wire the manager into **`src/services/run-profiles.ts`** and **Server Actions** (`startManagedRunProfileAction`, `stopManagedRunProfileAction`, etc.) with `MANDEV_ENABLE_COMMAND_EXECUTION` gating and DB profile lookup — still no UI until actions are stable.

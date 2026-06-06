@@ -120,30 +120,34 @@ The UI never exposes a REPL or command line. Stop/restart only target processes 
 
 ### In-memory process registry (Phase 3A MVP)
 
-Use a **module singleton** in `src/lib/run-profile-process-manager.ts`:
+**Implemented:** `src/lib/run-profile-process-manager.ts` exports `RunProfileProcessManager` and singleton `runProfileProcessManager`.
 
-- **Key:** `runProfileId` (one active managed run per profile for MVP; see edge cases for duplicate starts).
-- **Optional secondary ID:** `processRunId` (cuid generated on each start) for log correlation and future history.
+- **Key:** `runProfileId` (one managed run per profile; duplicate starts while `starting` / `running` / `stopping` are rejected).
+- **No `processRunId` in the skeleton** — deferred to Phase 3B run history.
+- **No Prisma / env gating in the manager** — service and Server Action layers enforce DB lookup and `MANDEV_ENABLE_COMMAND_EXECUTION` later.
 
-Each registry entry stores:
+Public snapshot shape (`RunProfileManagedProcessSnapshot`):
 
 ```typescript
-type ManagedRunProfileProcess = {
-  processRunId: string;
+{
   runProfileId: string;
-  projectId: string;
+  status: "idle" | "starting" | "running" | "stopping" | "stopped" | "failed" | "exited";
+  pid: number | null;
   command: string;
   workingDirectory: string;
-  status: ProcessLifecycleStatus;
-  pid: number | null;
-  child: ChildProcess | null; // not serialized; server-only
-  startedAt: Date | null;
-  stoppedAt: Date | null;
+  startedAt: string | null;   // ISO-8601
+  stoppedAt: string | null;
+  exitedAt: string | null;
   exitCode: number | null;
-  logs: RunProfileLogBuffer;
-  lastError: string | null;
-};
+  signal: string | null;
+  message: string;
+  logs: RunProfileLogSnapshot;
+}
 ```
+
+Manager API: `start`, `stop`, `restart`, `getSnapshot`, `listSnapshots`, `clear`. Tests construct isolated `RunProfileProcessManager` instances with mocked `spawn`.
+
+Internal registry entry also holds `ChildProcess` (server-only, not in snapshot) and stop-grace timer state.
 
 ### Spawn behavior
 
@@ -246,7 +250,7 @@ Polling contract:
 1. If status is not `running` (or `starting`), return current snapshot (idempotent).
 2. Set status → `stopping`.
 3. Send **SIGTERM** to `child.pid`.
-4. Start grace timer (default **5s**, configurable constant).
+4. Start grace timer (`RUN_PROFILE_PROCESS_STOP_GRACE_MS`, default **5000 ms**; injectable in tests).
 5. If still alive after grace → **SIGKILL**.
 6. On `close` → set `stoppedAt`, `exitCode`, status → `stopped` (user-initiated) or `exited` (natural close during stopping).
 
