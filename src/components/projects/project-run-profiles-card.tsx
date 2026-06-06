@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteRunProfileButton } from "@/components/projects/delete-run-profile-button";
+import { ManagedRunProfileControls } from "@/components/projects/managed-run-profile-controls";
 import { RunProfileExecutionResultPanel } from "@/components/projects/run-profile-execution-result-panel";
 import { RunRunProfileButton } from "@/components/projects/run-run-profile-button";
 import { ProjectRunProfilesImport } from "@/components/projects/project-run-profiles-import";
@@ -214,6 +215,15 @@ function RunProfileRow({
           heading="Last run just now"
           result={lastRun}
           className="space-y-2 rounded-md border border-border/80 bg-muted/20 p-3 text-xs"
+        />
+      ) : null}
+
+      {commandExecutionEnabled ? (
+        <ManagedRunProfileControls
+          profileId={profile.id}
+          profileName={profile.name}
+          command={profile.command}
+          workingDirectory={profile.workingDirectory}
         />
       ) : null}
     </li>

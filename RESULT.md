@@ -2,77 +2,85 @@
 
 ## Project summary
 
-ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Phase 2A provides opt-in short-command execution with session-only last-run UI. Phase 3 adds managed long-running process support via an in-memory process manager; Phase 3A service and Server Action wrappers are now wired, but no UI changes yet.
+ManDev (`manta-development-tools`) is a local Next.js 15 control-plane dashboard for managing software projects, features, backlog, architecture diagrams, and per-project run profiles. Phase 2A provides opt-in short-command execution with session-only last-run UI. Phase 3 adds managed long-running process support via an in-memory process manager; Phase 3A now exposes Start/Stop/Restart, status, and log polling in the Run Profiles card UI.
 
 ## Feature implemented
 
-**Run Profiles Phase 3A: Service + Server Actions Wrapper for Managed Processes**
+**Run Profiles Phase 3A UI MVP: Managed Start/Stop/Restart + Status/Logs Polling**
 
-Exposes the internal `RunProfileProcessManager` through `src/services/run-profiles.ts` and thin Server Actions so Phase 3 UI can later poll status/logs and call start/stop/restart safely. Mutating actions are gated by `MANDEV_ENABLE_COMMAND_EXECUTION=true`; start/restart load saved profile command/cwd from the database only.
-
-## Why this is Phase 3A wrapper
-
-Phase 3 requires a stable server API before the Run Profiles card can add Start/Stop/Restart, status badges, and log polling. This slice wires DB validation, env gating, and serializable results around the existing process manager — without changing Phase 2A Run button behavior, UI, or schema.
-
-## Files changed
-
-- `src/services/run-profiles.ts` — managed process service functions + `ManagedRunProfileActionResult` type
-- `src/app/projects/run-profiles/actions.ts` — five new Server Actions
-- `src/services/run-profiles.test.ts` — service tests (validation, env gate, manager delegation, Phase 2A long-running block)
-- `src/app/projects/run-profiles/actions.test.ts` — action delegation tests
-- `docs/features/run-profiles-phase-3.md` — aligned API docs with implementation
-- `RESULT.md` — this report
-
-## Service API
-
-| Function | Behavior |
-|----------|----------|
-| `startManagedRunProfile(runProfileId)` | Env gate → DB load → validate cwd/command → `runProfileProcessManager.start` |
-| `stopManagedRunProfile(runProfileId)` | Env gate → `runProfileProcessManager.stop` |
-| `restartManagedRunProfile(runProfileId)` | Env gate → DB load → validate → `runProfileProcessManager.restart` |
-| `getManagedRunProfileSnapshot(runProfileId)` | Returns manager snapshot or `null` (no env gate) |
-| `listManagedRunProfileSnapshots()` | Returns all manager snapshots (no env gate) |
-
-Result type: `ManagedRunProfileActionResult` with `ok`, `message`, optional `snapshot` / `snapshots`, and failure `reason` (`disabled`, `not_found`, `invalid_command`, `missing_working_directory`, `invalid_working_directory`, `not_directory`, `manager_error`).
-
-## Server Actions API
-
-| Action | Delegates to |
-|--------|----------------|
-| `startManagedRunProfileAction` | `startManagedRunProfile` |
-| `stopManagedRunProfileAction` | `stopManagedRunProfile` |
-| `restartManagedRunProfileAction` | `restartManagedRunProfile` |
-| `getManagedRunProfileSnapshotAction` | `getManagedRunProfileSnapshot` |
-| `listManagedRunProfileSnapshotsAction` | `listManagedRunProfileSnapshots` |
+Each run profile card (when command execution is enabled) includes a compact **Managed process** section with status badge, process metadata, Start/Stop/Restart controls, confirmation dialogs, and a collapsible scrollable logs panel. State is polled from in-memory snapshots via `getManagedRunProfileSnapshotAction`.
 
 ## Safety boundary
 
-- `MANDEV_ENABLE_COMMAND_EXECUTION=true` required for start/stop/restart
-- Command and working directory come only from saved `ProjectRunProfile` records
-- `validateRunProfileExecutionTarget` reused before spawn; no arbitrary caller input
-- Managed path does **not** apply Phase 2A long-running command block
-- Phase 2A `executeRunProfileAction` unchanged — still blocks long-running commands on the Run button
-- No env gating inside `RunProfileProcessManager`
+- Managed controls render only when `MANDEV_ENABLE_COMMAND_EXECUTION=true` (same gate as Phase 2A Run button)
+- Start/Restart use saved `ProjectRunProfile` records only — no free-form command input
+- Start and Restart require confirmation dialogs showing profile name, command, working directory, and local-process warning
+- Card-level amber warning remains visible when execution is enabled
+- Phase 2A `RunRunProfileButton` unchanged — still blocks long-running commands on the short Run path
+- Managed Start allows long-running commands (Phase 3 path)
+- Stop/Restart call managed Server Actions only
+- No database schema changes; no persisted run history; no SSE/WebSocket
 
-## Whether UI/app behavior changed
+## UI behavior
 
-**No.** No routes, components, schema, or Phase 2A Run button changes. New actions exist but are not called from the UI yet.
+- **Managed process** section per profile (violet accent, distinct from amber Phase 2A Run)
+- Status badge: idle / starting / running / stopping / stopped / failed / exited
+- Metadata when available: pid, startedAt, exitedAt, exitCode, signal
+- **Start** — visible when idle/stopped/failed/exited; opens confirmation dialog
+- **Stop** — visible when starting/running
+- **Restart** — visible when running/stopped/failed/exited; opens confirmation dialog
+- Action messages shown inline; errors also toast
+- Logs panel (`<details>`): stdout, stderr, truncated badges; compact scrollable `<pre>` blocks
+- Null snapshot handled safely (treated as idle)
+
+## Polling behavior
+
+- On mount: fetches initial snapshot via `getManagedRunProfileSnapshotAction(profileId)` (rediscover active in-memory processes after page refresh)
+- Poll interval: **1.5s** while status is `starting`, `running`, or `stopping`
+- Polling stops when status is `idle`, `stopped`, `failed`, or `exited`
+- Pure helpers in `src/lib/managed-run-profile-ui.ts` drive poll/button eligibility
+
+## Files changed
+
+- `src/components/projects/managed-run-profile-controls.tsx` — new client component (controls, dialogs, logs, polling)
+- `src/components/projects/project-run-profiles-card.tsx` — renders managed section when execution enabled
+- `src/lib/managed-run-profile-ui.ts` — status/poll/button helpers
+- `src/lib/managed-run-profile-ui.test.ts` — helper unit tests
+- `RESULT.md` — this report
+
+**Unchanged:** `run-run-profile-button.tsx`, Prisma schema, `RunProfileProcessManager`, Phase 3A service/actions (already wired).
+
+## Whether schema changed
+
+**No.** No Prisma migrations or database changes.
 
 ## Test / lint / typecheck status
 
-- `pnpm test`: Pass (330 tests)
+- `pnpm test`: Pass (338 tests)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass
 
 ## Known limitations
 
 - In-memory only — registry lost on ManDev server restart; possible orphan OS processes
-- No UI polling, status badges, or Start/Stop/Restart buttons yet
-- No confirmation dialog on managed start (UI responsibility in next slice)
-- Read actions (`get`/`list` snapshot) are not env-gated
 - Stop kills direct child only; no process-group / tree kill
 - No persisted run history or separate clear-logs action
+- No SSE/WebSocket — polling only (1.5s interval)
+- Restart confirmation reuses same dialog as Start (no separate “will stop first” detail)
+- Component-level tests not added (no established component test harness); covered by helper tests + typecheck/lint
+
+## Manual verification steps
+
+1. Set `.env`: `MANDEV_ENABLE_COMMAND_EXECUTION=true`
+2. Restart dev server
+3. Open a project with a run profile (working directory set), e.g. command `pnpm dev` or a safer long-running test command
+4. Confirm **Managed process** section appears; Phase 2A **Run** button still present
+5. Click **Start** → confirm dialog → process starts; status becomes **Running**
+6. Confirm logs appear in **Process logs** panel
+7. Click **Stop** → status becomes **Stopped**
+8. Click **Restart** → confirm → process restarts; logs reflect new run
+9. Refresh page while running → initial snapshot should rediscover active process
 
 ## Recommended next step
 
-Build Phase 3A UI on the Run Profiles card: status badge, Start/Stop/Restart buttons (with confirmation), and log panel polling `getManagedRunProfileSnapshotAction` every 1–2s while a process is active.
+Phase 3B: process-group/tree kill on stop, optional log clear action, and/or SSE push for logs to reduce polling load — still without DB persistence unless explicitly scoped.
