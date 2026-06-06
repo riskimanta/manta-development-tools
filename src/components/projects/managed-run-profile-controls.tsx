@@ -30,6 +30,7 @@ import {
   MANAGED_RUN_PROFILE_STALE_STATE_NOTICE,
   managedRunProfileStatusLabel,
   managedRunProfileStatusVariant,
+  resolveManagedRunProfileActionMessage,
   resolveManagedRunProfileStatus,
   shouldPollManagedRunProfileSnapshot,
 } from "@/lib/managed-run-profile-ui";
@@ -214,7 +215,7 @@ export function ManagedRunProfileControls({
   const [pending, startTransition] = useTransition();
   const bootSessionIdRef = useRef<string | null>(null);
 
-  function applyBootSessionId(nextBootSessionId: string | undefined) {
+  function applyBootSessionId(nextBootSessionId: string | undefined): boolean {
     const { bootSessionId, showStaleNotice } = applyManagedRunProfileBootSessionId(
       bootSessionIdRef.current,
       nextBootSessionId,
@@ -223,7 +224,10 @@ export function ManagedRunProfileControls({
     bootSessionIdRef.current = bootSessionId;
     if (showStaleNotice) {
       setShowStaleStateNotice(true);
+      setActionMessage(null);
     }
+
+    return showStaleNotice;
   }
 
   const status = resolveManagedRunProfileStatus(snapshot?.status);
@@ -242,10 +246,16 @@ export function ManagedRunProfileControls({
       }
 
       if (result.ok) {
-        applyBootSessionId(result.processManagerBootSessionId);
+        const staleDetected = applyBootSessionId(
+          result.processManagerBootSessionId,
+        );
         setSnapshot(result.snapshot ?? null);
-        if (result.snapshot?.message) {
+        if (staleDetected) {
+          setActionMessage(null);
+        } else if (result.snapshot?.message) {
           setActionMessage(result.snapshot.message);
+        } else {
+          setActionMessage(result.message);
         }
       } else {
         applyBootSessionId(result.processManagerBootSessionId);
@@ -321,6 +331,11 @@ export function ManagedRunProfileControls({
 
   const startedAtLabel = formatManagedTimestamp(snapshot?.startedAt ?? null);
   const exitedAtLabel = formatManagedTimestamp(snapshot?.exitedAt ?? null);
+  const visibleActionMessage = resolveManagedRunProfileActionMessage({
+    showStaleStateNotice,
+    actionMessage,
+    status,
+  });
 
   return (
     <div className="space-y-2 rounded-md border border-violet-500/25 bg-violet-500/5 p-2.5">
@@ -382,8 +397,8 @@ export function ManagedRunProfileControls({
         </dl>
       ) : null}
 
-      {actionMessage ? (
-        <p className="text-[11px] text-muted-foreground">{actionMessage}</p>
+      {visibleActionMessage ? (
+        <p className="text-[11px] text-muted-foreground">{visibleActionMessage}</p>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">

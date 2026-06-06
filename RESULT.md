@@ -1,29 +1,19 @@
-# ManDev — Run Profiles Phase 3B (stale managed process notice)
+# ManDev — Run Profiles stale notice copy fix
 
 ## What changed
 
-**`src/lib/run-profile-process-manager.ts`** — Added module-level `RUN_PROFILE_PROCESS_MANAGER_BOOT_SESSION_ID` (UUID at server boot) and `getRunProfileProcessManagerBootSessionId()`.
+**`src/lib/managed-run-profile-ui.ts`** — Added `resolveManagedRunProfileActionMessage()` to omit supporting action text when the stale restart notice is active and status is idle/terminal.
 
-**`src/lib/run-profile-managed-action-types.ts`** — `ManagedRunProfileActionResult` now includes `processManagerBootSessionId` on success and failure.
+**`src/components/projects/managed-run-profile-controls.tsx`** — Clears stale action message on boot-session change; updates action message when snapshot is absent; renders via `resolveManagedRunProfileActionMessage()` so text like “Process is running.” no longer appears alongside the stale banner.
 
-**`src/services/run-profiles.ts`** — All managed run profile service returns attach the current boot session id via `withProcessManagerBootSessionId`.
+**`src/lib/managed-run-profile-ui.test.ts`** — Tests for the new helper.
 
-**`src/app/projects/run-profiles/actions.ts`** — Early validation responses include `processManagerBootSessionId`.
+## Behavior
 
-**`src/lib/managed-run-profile-ui.ts`** — Added stale-state notice copy and helpers (`shouldShowManagedRunProfileStaleNotice`, `applyManagedRunProfileBootSessionId`).
-
-**`src/components/projects/managed-run-profile-controls.tsx`** — Tracks boot session id from action responses; shows an informational amber banner when the id changes after a prior value was seen.
-
-**Tests** — Updated service/action expectations; added UI helper and boot session id unit tests.
-
-**`docs/features/run-profiles-phase-3.md`** — Documented boot session id and stale-state notice.
-
-## Public API
-
-Managed run profile Server Action results now include `processManagerBootSessionId: string`. No DB or Phase 2A changes.
+After app/server restart, the amber stale notice still appears and status shows `Idle`, but conflicting old running copy is hidden. If the user starts the profile again, active-state messages show normally.
 
 ## Test / lint / typecheck status
 
-- `pnpm test`: Pass (350 tests)
+- `pnpm test`: Pass (354 tests)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass
