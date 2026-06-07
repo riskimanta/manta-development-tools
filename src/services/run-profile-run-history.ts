@@ -238,6 +238,16 @@ export async function getLatestRunProfileRun(
   return row ? toRunProfileRunRecord(row) : null;
 }
 
+export async function getRunProfileRunById(
+  runId: string,
+): Promise<RunProfileRunRecord | null> {
+  const row = await db.projectRunProfileRun.findUnique({
+    where: { id: runId },
+  });
+
+  return row ? toRunProfileRunRecord(row) : null;
+}
+
 /** In-progress run-history statuses orphaned when ManDev restarts mid-lifecycle. */
 const BOOT_STALE_RUN_STATUSES = ["starting", "running", "stopping"] as const;
 

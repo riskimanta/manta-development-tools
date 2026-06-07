@@ -38,6 +38,7 @@ import {
 import {
   createRunProfileRunForManagedStart,
   finalizeRunProfileRunFromSnapshot,
+  getRunProfileRunById,
   listRunProfileRuns,
   markActiveRunProfileRunsStaleOnBoot,
   updateRunProfileRunOnSpawn,
@@ -246,6 +247,17 @@ export type RunProfileRunHistoryPageData = {
   runs: RunProfileRunRecord[];
 };
 
+export type RunProfileRunDetailPageData = {
+  project: { id: string; name: string };
+  profile: {
+    id: string;
+    name: string;
+    command: string;
+    workingDirectory: string | null;
+  };
+  run: RunProfileRunRecord;
+};
+
 export async function getRunProfileRunHistoryPageData(
   projectId: string,
   runProfileId: string,
@@ -274,6 +286,41 @@ export async function getRunProfileRunHistoryPageData(
       workingDirectory: profile.workingDirectory,
     },
     runs,
+  };
+}
+
+export async function getRunProfileRunDetailPageData(
+  projectId: string,
+  runProfileId: string,
+  runId: string,
+): Promise<RunProfileRunDetailPageData | null> {
+  const [project, profile] = await Promise.all([
+    db.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, name: true },
+    }),
+    getRunProfileById(runProfileId),
+  ]);
+
+  if (!project || !profile || profile.projectId !== projectId) {
+    return null;
+  }
+
+  const run = await getRunProfileRunById(runId);
+
+  if (!run || run.runProfileId !== runProfileId) {
+    return null;
+  }
+
+  return {
+    project,
+    profile: {
+      id: profile.id,
+      name: profile.name,
+      command: profile.command,
+      workingDirectory: profile.workingDirectory,
+    },
+    run,
   };
 }
 

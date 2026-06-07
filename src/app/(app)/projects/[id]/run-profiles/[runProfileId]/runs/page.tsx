@@ -90,7 +90,13 @@ export default async function RunProfileRunHistoryPage({ params }: Props) {
         {runs.length === 0 ? (
           <p className="text-sm text-muted-foreground">No run history yet.</p>
         ) : (
-          <RunProfileRunList runs={runs} className="space-y-2" />
+          <RunProfileRunList
+            runs={runs}
+            className="space-y-2"
+            buildRunDetailHref={(runId) =>
+              `/projects/${project.id}/run-profiles/${profile.id}/runs/${runId}`
+            }
+          />
         )}
       </section>
     </>

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import type { RunProfileRunRecord } from "@/lib/run-profile-run-history-types";
 import {
@@ -12,7 +14,13 @@ import {
 const previewCodeClassName =
   "mt-0.5 block max-h-24 overflow-auto whitespace-pre-wrap break-all rounded bg-muted/80 px-2 py-1 font-mono text-[10px] text-foreground/90";
 
-function RunProfileRunListItem({ run }: { run: RunProfileRunRecord }) {
+function RunProfileRunListItem({
+  run,
+  runDetailHref,
+}: {
+  run: RunProfileRunRecord;
+  runDetailHref?: string;
+}) {
   const exitSummary = formatRunProfileRunExitSummary(run.exitCode, run.signal);
   const startedAt = formatRunProfileRunTimestamp(run.startedAt);
   const endedAt = formatRunProfileRunTimestamp(run.endedAt);
@@ -20,6 +28,14 @@ function RunProfileRunListItem({ run }: { run: RunProfileRunRecord }) {
   return (
     <li className="rounded border border-border/60 bg-background/40 p-2 space-y-1.5">
       <div className="flex flex-wrap items-center gap-2">
+        {runDetailHref ? (
+          <Link
+            href={runDetailHref}
+            className="text-[10px] font-medium text-primary hover:underline"
+          >
+            View details
+          </Link>
+        ) : null}
         <Badge
           variant={runProfileRunStatusVariant(run.status)}
           className="text-[10px] uppercase"
@@ -72,13 +88,22 @@ function RunProfileRunListItem({ run }: { run: RunProfileRunRecord }) {
 type Props = {
   runs: RunProfileRunRecord[];
   className?: string;
+  buildRunDetailHref?: (runId: string) => string;
 };
 
-export function RunProfileRunList({ runs, className }: Props) {
+export function RunProfileRunList({
+  runs,
+  className,
+  buildRunDetailHref,
+}: Props) {
   return (
     <ul className={className}>
       {runs.map((run) => (
-        <RunProfileRunListItem key={run.id} run={run} />
+        <RunProfileRunListItem
+          key={run.id}
+          run={run}
+          runDetailHref={buildRunDetailHref?.(run.id)}
+        />
       ))}
     </ul>
   );
