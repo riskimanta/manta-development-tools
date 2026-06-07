@@ -24,11 +24,11 @@ Per-run detail page at `/projects/[id]/run-profiles/[runProfileId]/runs/[runId]`
 |------|--------|
 | PR #12 mergeable | Yes — CLEAN, no conflicts |
 | Local branch `feat/run-profiles-run-detail-page` | Deleted |
-| Remote branch `feat/run-profiles-run-detail-page` | Deleted |
+| Remote branch `feat/run-profiles-run-detail-page` | Deleted (pruned stale ref) |
 | `main` synced with `origin/main` | Yes (ff-only) |
 
 ## Git status
-On `main`, up to date with `origin/main`.
+On `main`, up to date with `origin/main`, clean working tree.
 
 ## Known limitations
 - No DB schema changes; detail page shows persisted stdout/stderr previews only (larger layout, not full logs)
