@@ -6,12 +6,13 @@ import {
   RUN_PROFILE_RUN_STALE_APP_RESTART_SIGNAL,
   type RunProfileRunRecord,
 } from "@/lib/run-profile-run-history-types";
+import { RUN_PROFILE_ALL_RUNS_PAGE_LIMIT } from "@/lib/run-profile-run-history-ui";
 import type {
   RunProfileManagedProcessSnapshot,
   RunProfileManagedProcessStatus,
 } from "@/lib/run-profile-process-manager";
 
-const DEFAULT_RUN_HISTORY_LIMIT = 20;
+const DEFAULT_RUN_HISTORY_LIMIT = RUN_PROFILE_ALL_RUNS_PAGE_LIMIT;
 
 const TERMINAL_RUN_STATUSES: RunProfileManagedProcessStatus[] = [
   "stopped",

@@ -10,6 +10,9 @@ import {
 
 export const RUN_PROFILE_RECENT_RUNS_UI_LIMIT = 3;
 
+/** Default cap for the run profile “View all runs” history page. */
+export const RUN_PROFILE_ALL_RUNS_PAGE_LIMIT = 25;
+
 const IN_PROGRESS_RUN_STATUSES = new Set<string>([
   "starting",
   "running",

@@ -223,6 +223,18 @@ describe("listRunProfileRuns", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.id).toBe("run-1");
   });
+
+  it("uses the all-runs page default limit when limit is omitted", async () => {
+    vi.mocked(db.projectRunProfileRun.findMany).mockResolvedValue([]);
+
+    await listRunProfileRuns("rp-1");
+
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith({
+      where: { runProfileId: "rp-1" },
+      orderBy: { startedAt: "desc" },
+      take: 25,
+    });
+  });
 });
 
 describe("getLatestRunProfileRun", () => {
