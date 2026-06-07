@@ -17,7 +17,7 @@ import { featureStatusLabel, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getProjectArchitecture } from "@/services/architectures";
 import { getProjectById } from "@/services/projects";
-import { listRunProfilesByProjectId } from "@/services/run-profiles";
+import { listRunProfilesWithRecentRunsByProjectId } from "@/services/run-profiles";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -28,7 +28,7 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   const [architecture, runProfiles] = await Promise.all([
     getProjectArchitecture(project.id),
-    listRunProfilesByProjectId(project.id),
+    listRunProfilesWithRecentRunsByProjectId(project.id),
   ]);
   const defaultMermaidSource = buildDefaultArchitectureTemplate({
     name: project.name,

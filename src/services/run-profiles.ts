@@ -30,9 +30,12 @@ import type {
   RunProfileCreateInput,
   RunProfileUpdateInput,
 } from "@/lib/validations/run-profile";
+import type { RunProfileRunRecord } from "@/lib/run-profile-run-history-types";
+import { RUN_PROFILE_RECENT_RUNS_UI_LIMIT } from "@/lib/run-profile-run-history-ui";
 import {
   createRunProfileRunForManagedStart,
   finalizeRunProfileRunFromSnapshot,
+  listRunProfileRuns,
   updateRunProfileRunOnSpawn,
 } from "@/services/run-profile-run-history";
 
@@ -203,6 +206,35 @@ export function listRunProfilesByProjectId(projectId: string) {
     where: { projectId },
     orderBy: [{ isDefault: "desc" }, { name: "asc" }],
   });
+}
+
+export type RunProfileWithRecentRuns = {
+  id: string;
+  name: string;
+  command: string;
+  workingDirectory: string | null;
+  description: string | null;
+  isDefault: boolean;
+  recentRuns: RunProfileRunRecord[];
+};
+
+export async function listRunProfilesWithRecentRunsByProjectId(
+  projectId: string,
+  recentRunsLimit: number = RUN_PROFILE_RECENT_RUNS_UI_LIMIT,
+): Promise<RunProfileWithRecentRuns[]> {
+  const profiles = await listRunProfilesByProjectId(projectId);
+
+  return Promise.all(
+    profiles.map(async (profile) => ({
+      id: profile.id,
+      name: profile.name,
+      command: profile.command,
+      workingDirectory: profile.workingDirectory,
+      description: profile.description,
+      isDefault: profile.isDefault,
+      recentRuns: await listRunProfileRuns(profile.id, recentRunsLimit),
+    })),
+  );
 }
 
 export function getRunProfileById(id: string) {

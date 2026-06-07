@@ -440,7 +440,8 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 ### Phase 3B (later)
 
 - [ ] SSE log streaming Route Handler
-- [x] Persisted run history foundation (`ProjectRunProfileRun` model; create on managed start, finalize on stop/exit/fail; no history UI yet)
+- [x] Persisted run history foundation (`ProjectRunProfileRun` model; create on managed start, finalize on stop/exit/fail)
+- [x] Recent run history UI on Run Profiles card (latest 3 per profile; refresh to see new runs)
 - [x] Unix process groups / improved tree kill (Phase 3B safe stop — `detached` spawn + `kill(-pid)` on POSIX, Windows unchanged)
 - [ ] Orphan detection (pidfile or startup scan)
 - [x] App/server restart stale-state notice (`processManagerBootSessionId` + managed UI banner)
@@ -453,7 +454,15 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 - **Fields:** status, command, workingDirectory, pid, startedAt, endedAt, exitCode, signal, durationMs, stdoutPreview, stderrPreview.
 - **Service:** `src/services/run-profile-run-history.ts` — `createRunProfileRunForManagedStart`, `updateRunProfileRunOnSpawn`, `finalizeRunProfileRunFromSnapshot`, `listRunProfileRuns`, `getLatestRunProfileRun`.
 - **Integration:** managed start/restart create a row; process-manager lifecycle callbacks (`spawn`, `error`, `close`) update/finalize via service layer (no Prisma in process manager).
-- **Limitations:** live process state remains in-memory; orphaned `running` rows may remain if ManDev restarts mid-run; full history UI deferred.
+- **Limitations:** live process state remains in-memory; orphaned `running` rows may remain if ManDev restarts mid-run.
+
+### Phase 3C UI — recent run history (implemented)
+
+- **Data loading:** Project Detail page calls `listRunProfilesWithRecentRunsByProjectId` (latest 3 runs per profile, serializable `RunProfileRunRecord[]`).
+- **UI:** `run-profile-recent-runs.tsx` compact section inside each Run Profile card row — status badge, PID, started/ended, duration, exit/signal, stdout/stderr previews.
+- **Empty state:** “No run history yet.” when a profile has no persisted runs.
+- **Helpers:** `src/lib/run-profile-run-history-ui.ts` — duration/timestamp/exit formatting and status labels.
+- **Not included:** live history updates (page refresh required), SSE, full run-history dashboard, or DB schema changes.
 
 ---
 
@@ -498,7 +507,9 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 | `src/lib/run-profile-execution.ts` | Short command spawn, 30s timeout, long-running block |
 | `src/services/run-profiles.ts` | `executeRunProfileCommand` |
 | `src/app/projects/run-profiles/actions.ts` | `executeRunProfileAction` |
-| `src/components/projects/project-run-profiles-card.tsx` | Profile list, last-run panel |
+| `src/components/projects/project-run-profiles-card.tsx` | Profile list, last-run panel, recent run history |
+| `src/components/projects/run-profile-recent-runs.tsx` | Compact persisted run history per profile |
+| `src/lib/run-profile-run-history-ui.ts` | Run history display helpers |
 | `src/components/projects/run-run-profile-button.tsx` | Confirmation + run |
 | `src/lib/mandev-command-execution.ts` | Env gate |
 
