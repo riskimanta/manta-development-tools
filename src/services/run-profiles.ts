@@ -36,7 +36,7 @@ import {
   createRunProfileRunForManagedStart,
   finalizeRunProfileRunFromSnapshot,
   listRunProfileRuns,
-  markRunningRunProfileRunsStaleOnBoot,
+  markActiveRunProfileRunsStaleOnBoot,
   updateRunProfileRunOnSpawn,
 } from "@/services/run-profile-run-history";
 
@@ -197,7 +197,7 @@ function ensureRunProfileRunHistoryBootRecovery(): void {
   }
 
   runProfileRunHistoryBootRecoveryStarted = true;
-  void markRunningRunProfileRunsStaleOnBoot();
+  void markActiveRunProfileRunsStaleOnBoot();
 }
 
 ensureRunProfileRunHistoryBootRecovery();
