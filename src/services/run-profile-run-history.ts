@@ -199,20 +199,23 @@ export async function getLatestRunProfileRun(
   return row ? toRunProfileRunRecord(row) : null;
 }
 
-export async function markRunningRunProfileRunsStaleOnBoot(): Promise<number> {
+/** In-progress run-history statuses orphaned when ManDev restarts mid-lifecycle. */
+const BOOT_STALE_RUN_STATUSES = ["starting", "running", "stopping"] as const;
+
+export async function markActiveRunProfileRunsStaleOnBoot(): Promise<number> {
   try {
     const now = new Date();
-    const runningRows = await db.projectRunProfileRun.findMany({
-      where: { status: "running" },
+    const activeRows = await db.projectRunProfileRun.findMany({
+      where: { status: { in: [...BOOT_STALE_RUN_STATUSES] } },
       select: { id: true, startedAt: true },
     });
 
-    if (runningRows.length === 0) {
+    if (activeRows.length === 0) {
       return 0;
     }
 
     await db.$transaction(
-      runningRows.map((row) =>
+      activeRows.map((row) =>
         db.projectRunProfileRun.update({
           where: { id: row.id },
           data: {
@@ -225,9 +228,9 @@ export async function markRunningRunProfileRunsStaleOnBoot(): Promise<number> {
       ),
     );
 
-    return runningRows.length;
+    return activeRows.length;
   } catch (error) {
-    logRunHistoryError("markRunningRunProfileRunsStaleOnBoot", error);
+    logRunHistoryError("markActiveRunProfileRunsStaleOnBoot", error);
     return 0;
   }
 }

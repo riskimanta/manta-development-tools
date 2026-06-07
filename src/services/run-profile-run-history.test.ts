@@ -8,7 +8,7 @@ import {
   finalizeRunProfileRunFromSnapshot,
   getLatestRunProfileRun,
   listRunProfileRuns,
-  markRunningRunProfileRunsStaleOnBoot,
+  markActiveRunProfileRunsStaleOnBoot,
   toRunProfileRunRecord,
   updateRunProfileRunOnSpawn,
 } from "@/services/run-profile-run-history";
@@ -249,7 +249,7 @@ describe("getLatestRunProfileRun", () => {
   });
 });
 
-describe("markRunningRunProfileRunsStaleOnBoot", () => {
+describe("markActiveRunProfileRunsStaleOnBoot", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -259,6 +259,22 @@ describe("markRunningRunProfileRunsStaleOnBoot", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
+
+  const activeStatusesWhere = {
+    where: { status: { in: ["starting", "running", "stopping"] } },
+    select: { id: true, startedAt: true },
+  };
+
+  const staleUpdate = (id: string, durationMs: number) =>
+    db.projectRunProfileRun.update({
+      where: { id },
+      data: {
+        status: "stale",
+        endedAt: new Date("2026-06-07T12:00:00.000Z"),
+        durationMs,
+        signal: "APP_RESTART",
+      },
+    });
 
   it("marks running rows stale with restart signal and duration", async () => {
     const runningRow = {
@@ -271,31 +287,66 @@ describe("markRunningRunProfileRunsStaleOnBoot", () => {
     ] as never);
     vi.mocked(db.$transaction).mockResolvedValue([]);
 
-    const count = await markRunningRunProfileRunsStaleOnBoot();
+    const count = await markActiveRunProfileRunsStaleOnBoot();
 
-    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith({
-      where: { status: "running" },
-      select: { id: true, startedAt: true },
-    });
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith(
+      activeStatusesWhere,
+    );
     expect(db.$transaction).toHaveBeenCalledWith([
-      db.projectRunProfileRun.update({
-        where: { id: "run-running" },
-        data: {
-          status: "stale",
-          endedAt: new Date("2026-06-07T12:00:00.000Z"),
-          durationMs: 60_000,
-          signal: "APP_RESTART",
-        },
-      }),
+      staleUpdate("run-running", 60_000),
     ]);
     expect(count).toBe(1);
   });
 
-  it("does not change non-running rows", async () => {
+  it("marks starting rows stale with restart signal and duration", async () => {
+    const startingRow = {
+      id: "run-starting",
+      startedAt: new Date("2026-06-07T11:58:30.000Z"),
+    };
+
+    vi.mocked(db.projectRunProfileRun.findMany).mockResolvedValue([
+      startingRow,
+    ] as never);
+    vi.mocked(db.$transaction).mockResolvedValue([]);
+
+    const count = await markActiveRunProfileRunsStaleOnBoot();
+
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith(
+      activeStatusesWhere,
+    );
+    expect(db.$transaction).toHaveBeenCalledWith([
+      staleUpdate("run-starting", 90_000),
+    ]);
+    expect(count).toBe(1);
+  });
+
+  it("marks stopping rows stale with restart signal and duration", async () => {
+    const stoppingRow = {
+      id: "run-stopping",
+      startedAt: new Date("2026-06-07T11:57:00.000Z"),
+    };
+
+    vi.mocked(db.projectRunProfileRun.findMany).mockResolvedValue([
+      stoppingRow,
+    ] as never);
+    vi.mocked(db.$transaction).mockResolvedValue([]);
+
+    const count = await markActiveRunProfileRunsStaleOnBoot();
+
+    expect(db.$transaction).toHaveBeenCalledWith([
+      staleUpdate("run-stopping", 180_000),
+    ]);
+    expect(count).toBe(1);
+  });
+
+  it("does not change terminal rows", async () => {
     vi.mocked(db.projectRunProfileRun.findMany).mockResolvedValue([]);
 
-    const count = await markRunningRunProfileRunsStaleOnBoot();
+    const count = await markActiveRunProfileRunsStaleOnBoot();
 
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith(
+      activeStatusesWhere,
+    );
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(count).toBe(0);
   });
@@ -308,9 +359,9 @@ describe("markRunningRunProfileRunsStaleOnBoot", () => {
       new Error("db down"),
     );
 
-    await expect(markRunningRunProfileRunsStaleOnBoot()).resolves.toBe(0);
+    await expect(markActiveRunProfileRunsStaleOnBoot()).resolves.toBe(0);
     expect(consoleError).toHaveBeenCalledWith(
-      "[run-profile-run-history] markRunningRunProfileRunsStaleOnBoot: db down",
+      "[run-profile-run-history] markActiveRunProfileRunsStaleOnBoot: db down",
     );
 
     consoleError.mockRestore();
