@@ -39,12 +39,20 @@ Phase 3 is officially complete. All planned slices (3A–3D) shipped via merged 
 - **Empty state:** refresh control visible even when there is no run history yet.
 - **Not included:** schema changes, live push updates, or changes to managed Start/Stop/Restart or Phase 2A short execution.
 
+### Phase 4B — View all runs (implemented)
+
+- **UI:** compact “View all runs” link beside each profile’s Recent Runs heading.
+- **Route:** `/projects/[id]/run-profiles/[runProfileId]/runs` — profile name, command, working directory, and up to 25 persisted runs (newest first) with status, PID, timestamps, duration, exit/signal, and stdout/stderr previews.
+- **Service:** `getRunProfileRunHistoryPageData` validates project ownership and reuses `listRunProfileRuns` with `RUN_PROFILE_ALL_RUNS_PAGE_LIMIT` (25).
+- **Empty state:** “No run history yet.” on the history page when no rows exist.
+- **Not included:** pagination, filters, charts, schema changes, SSE/WebSocket, or changes to managed Start/Stop/Restart or Phase 2A short execution.
+
 ### Remaining limitations / Phase 4 candidates
 
 - **No automatic Recent Runs updates** — manual refresh or full page reload; no SSE or WebSocket live updates
 - **Live process state in-memory** — managed registry and log buffers lost on ManDev server restart
 - **Orphan OS processes** — child processes may keep running after app restart; manual cleanup may still be required
-- **No full run detail page** — Recent Runs shows compact previews only
+- **No per-run detail page** — history page shows compact previews only; no deep link to a single run
 - **No persisted full logs** — DB stores stdout/stderr previews, not complete log files
 - **Phase 2A short execution separate** — 30s fire-and-wait path unchanged; not linked to managed run history
 - **SSE log streaming** — polling remains the delivery mechanism
@@ -575,7 +583,9 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 | `src/app/projects/run-profiles/actions.ts` | `executeRunProfileAction` |
 | `src/components/projects/project-run-profiles-card.tsx` | Profile list, last-run panel, recent run history |
 | `src/components/projects/run-profile-recent-runs.tsx` | Compact persisted run history per profile |
+| `src/components/projects/run-profile-run-list.tsx` | Shared run history list items (Recent Runs + View all runs page) |
 | `src/components/projects/refresh-recent-runs-button.tsx` | Manual Recent Runs refresh via `router.refresh()` |
+| `src/app/(app)/projects/[id]/run-profiles/[runProfileId]/runs/page.tsx` | View all runs history page (Phase 4B) |
 | `src/lib/run-profile-run-history-ui.ts` | Run history display helpers |
 | `src/components/projects/run-run-profile-button.tsx` | Confirmation + run |
 | `src/lib/mandev-command-execution.ts` | Env gate |

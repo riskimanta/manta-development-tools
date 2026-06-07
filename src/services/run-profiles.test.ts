@@ -14,6 +14,7 @@ import {
   getManagedRunProfileSnapshot,
   importProjectRunProfilesFromLocalFile,
   listManagedRunProfileSnapshots,
+  getRunProfileRunHistoryPageData,
   listRunProfilesWithRecentRunsByProjectId,
   previewProjectRunProfilesImportFromLocalFile,
   resolveRunProfileWorkingDirectory,
@@ -871,5 +872,77 @@ describe("listRunProfilesWithRecentRunsByProjectId", () => {
     const result = await listRunProfilesWithRecentRunsByProjectId("proj-1");
 
     expect(result[0]?.recentRuns).toEqual([]);
+  });
+});
+
+describe("getRunProfileRunHistoryPageData", () => {
+  const recentRun = {
+    id: "run-1",
+    runProfileId: "rp-1",
+    status: "exited",
+    command: "pnpm dev",
+    workingDirectory: "/Users/dev/app",
+    pid: 4242,
+    startedAt: "2026-01-01T00:00:00.000Z",
+    endedAt: "2026-01-01T00:01:00.000Z",
+    exitCode: 0,
+    signal: null,
+    durationMs: 60_000,
+    stdoutPreview: "ready",
+    stderrPreview: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:01:00.000Z",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns project, profile, and runs when the profile belongs to the project", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+    } as never);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(mockProfile);
+    vi.mocked(listRunProfileRuns).mockResolvedValue([recentRun]);
+
+    const result = await getRunProfileRunHistoryPageData("proj-1", "rp-1");
+
+    expect(listRunProfileRuns).toHaveBeenCalledWith("rp-1", 25);
+    expect(result).toEqual({
+      project: { id: "proj-1", name: "ManDev" },
+      profile: {
+        id: "rp-1",
+        name: "Dev",
+        command: "pnpm dev",
+        workingDirectory: "/Users/dev/app",
+      },
+      runs: [recentRun],
+    });
+  });
+
+  it("returns null when the profile belongs to a different project", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+    } as never);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue({
+      ...mockProfile,
+      projectId: "other-project",
+    });
+
+    await expect(
+      getRunProfileRunHistoryPageData("proj-1", "rp-1"),
+    ).resolves.toBeNull();
+    expect(listRunProfileRuns).not.toHaveBeenCalled();
+  });
+
+  it("returns null when the project or profile is missing", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue(null);
+    vi.mocked(db.projectRunProfile.findUnique).mockResolvedValue(null);
+
+    await expect(
+      getRunProfileRunHistoryPageData("proj-1", "rp-1"),
+    ).resolves.toBeNull();
   });
 });

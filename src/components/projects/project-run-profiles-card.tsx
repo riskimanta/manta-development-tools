@@ -232,6 +232,7 @@ function RunProfileRow({
 
       <RunProfileRecentRuns
         recentRuns={profile.recentRuns ?? []}
+        viewAllHref={`/projects/${projectId}/run-profiles/${profile.id}/runs`}
         className="rounded-md border border-dashed border-border/70 bg-muted/10 p-2.5"
       />
     </li>
