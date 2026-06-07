@@ -36,6 +36,7 @@ import {
   createRunProfileRunForManagedStart,
   finalizeRunProfileRunFromSnapshot,
   listRunProfileRuns,
+  markRunningRunProfileRunsStaleOnBoot,
   updateRunProfileRunOnSpawn,
 } from "@/services/run-profile-run-history";
 
@@ -187,6 +188,19 @@ async function handleManagedProcessLifecycleEvent(
 runProfileProcessManager.setLifecycleHandler((event) =>
   handleManagedProcessLifecycleEvent(event),
 );
+
+let runProfileRunHistoryBootRecoveryStarted = false;
+
+function ensureRunProfileRunHistoryBootRecovery(): void {
+  if (runProfileRunHistoryBootRecoveryStarted) {
+    return;
+  }
+
+  runProfileRunHistoryBootRecoveryStarted = true;
+  void markRunningRunProfileRunsStaleOnBoot();
+}
+
+ensureRunProfileRunHistoryBootRecovery();
 
 export function resolveRunProfileWorkingDirectory(
   workingDirectory: string | null | undefined,

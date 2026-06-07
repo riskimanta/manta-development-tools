@@ -2,7 +2,10 @@ import type { ProjectRunProfileRun } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { truncateRunProfileOutputPreview } from "@/lib/run-profile-execution";
-import type { RunProfileRunRecord } from "@/lib/run-profile-run-history-types";
+import {
+  RUN_PROFILE_RUN_STALE_APP_RESTART_SIGNAL,
+  type RunProfileRunRecord,
+} from "@/lib/run-profile-run-history-types";
 import type {
   RunProfileManagedProcessSnapshot,
   RunProfileManagedProcessStatus,
@@ -194,4 +197,37 @@ export async function getLatestRunProfileRun(
   });
 
   return row ? toRunProfileRunRecord(row) : null;
+}
+
+export async function markRunningRunProfileRunsStaleOnBoot(): Promise<number> {
+  try {
+    const now = new Date();
+    const runningRows = await db.projectRunProfileRun.findMany({
+      where: { status: "running" },
+      select: { id: true, startedAt: true },
+    });
+
+    if (runningRows.length === 0) {
+      return 0;
+    }
+
+    await db.$transaction(
+      runningRows.map((row) =>
+        db.projectRunProfileRun.update({
+          where: { id: row.id },
+          data: {
+            status: "stale",
+            endedAt: now,
+            durationMs: computeDurationMs(row.startedAt, now),
+            signal: RUN_PROFILE_RUN_STALE_APP_RESTART_SIGNAL,
+          },
+        }),
+      ),
+    );
+
+    return runningRows.length;
+  } catch (error) {
+    logRunHistoryError("markRunningRunProfileRunsStaleOnBoot", error);
+    return 0;
+  }
 }
