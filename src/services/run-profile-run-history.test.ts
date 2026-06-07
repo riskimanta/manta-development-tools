@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/lib/db";
 import type { RunProfileManagedProcessSnapshot } from "@/lib/run-profile-process-manager";
@@ -8,6 +8,7 @@ import {
   finalizeRunProfileRunFromSnapshot,
   getLatestRunProfileRun,
   listRunProfileRuns,
+  markRunningRunProfileRunsStaleOnBoot,
   toRunProfileRunRecord,
   updateRunProfileRunOnSpawn,
 } from "@/services/run-profile-run-history";
@@ -20,6 +21,7 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -244,5 +246,73 @@ describe("getLatestRunProfileRun", () => {
     vi.mocked(db.projectRunProfileRun.findFirst).mockResolvedValue(null);
 
     await expect(getLatestRunProfileRun("rp-1")).resolves.toBeNull();
+  });
+});
+
+describe("markRunningRunProfileRunsStaleOnBoot", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-07T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("marks running rows stale with restart signal and duration", async () => {
+    const runningRow = {
+      id: "run-running",
+      startedAt: new Date("2026-06-07T11:59:00.000Z"),
+    };
+
+    vi.mocked(db.projectRunProfileRun.findMany).mockResolvedValue([
+      runningRow,
+    ] as never);
+    vi.mocked(db.$transaction).mockResolvedValue([]);
+
+    const count = await markRunningRunProfileRunsStaleOnBoot();
+
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith({
+      where: { status: "running" },
+      select: { id: true, startedAt: true },
+    });
+    expect(db.$transaction).toHaveBeenCalledWith([
+      db.projectRunProfileRun.update({
+        where: { id: "run-running" },
+        data: {
+          status: "stale",
+          endedAt: new Date("2026-06-07T12:00:00.000Z"),
+          durationMs: 60_000,
+          signal: "APP_RESTART",
+        },
+      }),
+    ]);
+    expect(count).toBe(1);
+  });
+
+  it("does not change non-running rows", async () => {
+    vi.mocked(db.projectRunProfileRun.findMany).mockResolvedValue([]);
+
+    const count = await markRunningRunProfileRunsStaleOnBoot();
+
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(count).toBe(0);
+  });
+
+  it("logs and returns zero when db fails without throwing", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.mocked(db.projectRunProfileRun.findMany).mockRejectedValue(
+      new Error("db down"),
+    );
+
+    await expect(markRunningRunProfileRunsStaleOnBoot()).resolves.toBe(0);
+    expect(consoleError).toHaveBeenCalledWith(
+      "[run-profile-run-history] markRunningRunProfileRunsStaleOnBoot: db down",
+    );
+
+    consoleError.mockRestore();
   });
 });

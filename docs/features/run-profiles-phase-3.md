@@ -395,7 +395,7 @@ If persistence is needed later, prefer **DB for metadata only** (run id, profile
 
 | Case | Handling |
 |------|----------|
-| **ManDev server restart** | In-memory registry empty; UI shows `idle`; **orphan OS processes may keep running** — document; user must kill manually or via port conflict discovery. Phase 3B: optional startup pidfile scan. **Implemented (3B):** managed UI compares `processManagerBootSessionId` from Server Actions; when it changes after a prior value was seen, an informational amber notice explains that managed state was reset. |
+| **ManDev server restart** | In-memory registry empty; UI shows `idle`; **orphan OS processes may keep running** — document; user must kill manually or via port conflict discovery. Phase 3B: optional startup pidfile scan. **Implemented (3B):** managed UI compares `processManagerBootSessionId` from Server Actions; when it changes after a prior value was seen, an informational amber notice explains that managed state was reset. **Implemented (3D):** persisted run-history rows still marked `running` are finalized as `stale` with `signal = APP_RESTART` on app boot. |
 | **Orphaned processes** | MVP does not reconcile PIDs after restart; warn in docs and UI footer |
 | **Port conflicts** | Command fails or hangs; stderr shows "address already in use"; status → `failed` or `exited` with non-zero code |
 | **Command exits immediately** | `starting` → quick `exited`/`failed`; logs still shown |
@@ -445,6 +445,7 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 - [x] Unix process groups / improved tree kill (Phase 3B safe stop — `detached` spawn + `kill(-pid)` on POSIX, Windows unchanged)
 - [ ] Orphan detection (pidfile or startup scan)
 - [x] App/server restart stale-state notice (`processManagerBootSessionId` + managed UI banner)
+- [x] Stale run-history recovery on boot (`markRunningRunProfileRunsStaleOnBoot`; marks orphaned `running` rows as `stale`)
 - [ ] Bind-address exposure warning automation
 - [ ] Clear separation UI: "Run once" (30s) vs "Start server" (managed)
 
@@ -455,6 +456,13 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 - **Service:** `src/services/run-profile-run-history.ts` — `createRunProfileRunForManagedStart`, `updateRunProfileRunOnSpawn`, `finalizeRunProfileRunFromSnapshot`, `listRunProfileRuns`, `getLatestRunProfileRun`.
 - **Integration:** managed start/restart create a row; process-manager lifecycle callbacks (`spawn`, `error`, `close`) update/finalize via service layer (no Prisma in process manager).
 - **Limitations:** live process state remains in-memory; orphaned `running` rows may remain if ManDev restarts mid-run.
+
+### Phase 3D — stale run-history recovery on boot (implemented)
+
+- **Service:** `markRunningRunProfileRunsStaleOnBoot()` in `src/services/run-profile-run-history.ts` — on app/server boot, rows with `status = "running"` are updated to `stale`, with `endedAt`, `durationMs`, and `signal = "APP_RESTART"`. stdout/stderr previews are preserved.
+- **Integration:** invoked once from `src/services/run-profiles.ts` when managed run-profile services register (same module as lifecycle handler); idempotent and non-throwing on DB failure.
+- **UI:** Recent Runs shows **Stale** badge and compact **app restart** exit summary for recovered rows.
+- **Not included:** schema changes, SSE, full process persistence, or changes to Phase 2A short execution / managed Start/Stop/Restart behavior.
 
 ### Phase 3C UI — recent run history (implemented)
 

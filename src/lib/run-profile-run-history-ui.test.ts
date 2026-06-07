@@ -48,6 +48,10 @@ describe("runProfileRunStatusLabel", () => {
     expect(runProfileRunStatusLabel("running")).toBe("Running");
     expect(runProfileRunStatusLabel("exited")).toBe("Exited");
   });
+
+  it("labels stale recovery rows clearly", () => {
+    expect(runProfileRunStatusLabel("stale")).toBe("Stale");
+  });
 });
 
 describe("formatRunProfileRunTimestamp", () => {
@@ -99,6 +103,12 @@ describe("formatRunProfileRunExitSummary", () => {
 
   it("returns null when neither is set", () => {
     expect(formatRunProfileRunExitSummary(null, null)).toBeNull();
+  });
+
+  it("shows a compact summary for app restart recovery", () => {
+    expect(formatRunProfileRunExitSummary(null, "APP_RESTART")).toBe(
+      "app restart",
+    );
   });
 });
 

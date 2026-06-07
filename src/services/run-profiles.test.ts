@@ -86,6 +86,7 @@ vi.mock("@/services/run-profile-run-history", () => ({
   updateRunProfileRunOnSpawn: vi.fn(),
   listRunProfileRuns: vi.fn(),
   getLatestRunProfileRun: vi.fn(),
+  markRunningRunProfileRunsStaleOnBoot: vi.fn().mockResolvedValue(0),
 }));
 
 vi.mock("node:fs", () => ({

@@ -1,4 +1,7 @@
-import type { RunProfileRunRecord } from "@/lib/run-profile-run-history-types";
+import {
+  RUN_PROFILE_RUN_STALE_APP_RESTART_SIGNAL,
+  type RunProfileRunRecord,
+} from "@/lib/run-profile-run-history-types";
 import type { RunProfileManagedProcessStatus } from "@/lib/run-profile-process-manager";
 import {
   managedRunProfileStatusLabel,
@@ -38,12 +41,20 @@ export function resolveRunProfileRunStatus(
 }
 
 export function runProfileRunStatusLabel(status: string): string {
+  if (status === "stale") {
+    return "Stale";
+  }
+
   return managedRunProfileStatusLabel(resolveRunProfileRunStatus(status));
 }
 
 export function runProfileRunStatusVariant(
   status: string,
 ): "default" | "secondary" | "destructive" | "outline" {
+  if (status === "stale") {
+    return "secondary";
+  }
+
   return managedRunProfileStatusVariant(resolveRunProfileRunStatus(status));
 }
 
@@ -98,6 +109,10 @@ export function formatRunProfileRunExitSummary(
   exitCode: number | null,
   signal: string | null,
 ): string | null {
+  if (signal === RUN_PROFILE_RUN_STALE_APP_RESTART_SIGNAL) {
+    return "app restart";
+  }
+
   if (signal) {
     return `signal ${signal}`;
   }
