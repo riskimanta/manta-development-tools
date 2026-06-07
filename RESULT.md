@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 4B shipped:** “View all runs” link and dedicated run history page per Run Profile.
+**Phase 4B shipped:** “View all runs” link and dedicated run history page per Run Profile. PR opened on GitHub.
 
 | Slice | Delivered |
 |-------|-----------|
@@ -39,3 +39,36 @@
 ## Schema / migration
 
 None.
+
+## Git workflow
+
+| Item | Value |
+|------|--------|
+| **Current branch** | `feat/run-profiles-view-all-runs` |
+| **Commit hash** | `5bb1a601eb8299dad4f79b8e31fc5e8cb6f79d02` |
+| **Commit message** | `feat: add run profile run history page` |
+| **Push result** | Pushed to `origin/feat/run-profiles-view-all-runs` (up to date) |
+| **PR** | [#10](https://github.com/riskimanta/manta-development-tools/pull/10) — OPEN, mergeable, no conflicts (`mergeStateStatus: CLEAN`) |
+| **Merge/cleanup** | Not merged yet; ready to merge when approved |
+
+### Changed files (11)
+
+- `RESULT.md`
+- `docs/features/run-profiles-phase-3.md`
+- `src/app/(app)/projects/[id]/run-profiles/[runProfileId]/runs/page.tsx`
+- `src/components/projects/project-run-profiles-card.tsx`
+- `src/components/projects/run-profile-recent-runs.tsx`
+- `src/components/projects/run-profile-run-list.tsx`
+- `src/lib/run-profile-run-history-ui.ts`
+- `src/services/run-profile-run-history.test.ts`
+- `src/services/run-profile-run-history.ts`
+- `src/services/run-profiles.test.ts`
+- `src/services/run-profiles.ts`
+
+### Final git status
+
+```
+On branch feat/run-profiles-view-all-runs
+Your branch is up to date with 'origin/feat/run-profiles-view-all-runs'.
+nothing to commit, working tree clean
+```
