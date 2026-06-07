@@ -32,9 +32,16 @@ Phase 3 is officially complete. All planned slices (3A–3D) shipped via merged 
 - Active stale recovery turned app-restart orphaned rows into `STALE`, not `STARTING`
 - Orphan test OS processes were manually cleaned after restart tests
 
+### Phase 4A — Refresh recent runs (implemented)
+
+- **UI:** `RefreshRecentRunsButton` beside each profile’s Recent Runs heading — label “Refresh recent runs”.
+- **Behavior:** client `router.refresh()` re-fetches server-rendered `listRunProfilesWithRecentRunsByProjectId` data; no new API, SSE, or polling.
+- **Empty state:** refresh control visible even when there is no run history yet.
+- **Not included:** schema changes, live push updates, or changes to managed Start/Stop/Restart or Phase 2A short execution.
+
 ### Remaining limitations / Phase 4 candidates
 
-- **Recent Runs refresh only** — history loads on page render; no SSE or WebSocket live updates
+- **No automatic Recent Runs updates** — manual refresh or full page reload; no SSE or WebSocket live updates
 - **Live process state in-memory** — managed registry and log buffers lost on ManDev server restart
 - **Orphan OS processes** — child processes may keep running after app restart; manual cleanup may still be required
 - **No full run detail page** — Recent Runs shows compact previews only
@@ -519,7 +526,7 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 - **UI:** `run-profile-recent-runs.tsx` compact section inside each Run Profile card row — status badge, PID, started/ended, duration, exit/signal, stdout/stderr previews.
 - **Empty state:** “No run history yet.” when a profile has no persisted runs.
 - **Helpers:** `src/lib/run-profile-run-history-ui.ts` — duration/timestamp/exit formatting and status labels.
-- **Not included:** live history updates (page refresh required), SSE, full run-history dashboard, or DB schema changes.
+- **Refresh:** Phase 4A adds “Refresh recent runs” (`router.refresh()`); no automatic live updates, SSE, full run-history dashboard, or DB schema changes.
 
 ---
 
@@ -568,6 +575,7 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 | `src/app/projects/run-profiles/actions.ts` | `executeRunProfileAction` |
 | `src/components/projects/project-run-profiles-card.tsx` | Profile list, last-run panel, recent run history |
 | `src/components/projects/run-profile-recent-runs.tsx` | Compact persisted run history per profile |
+| `src/components/projects/refresh-recent-runs-button.tsx` | Manual Recent Runs refresh via `router.refresh()` |
 | `src/lib/run-profile-run-history-ui.ts` | Run history display helpers |
 | `src/components/projects/run-run-profile-button.tsx` | Confirmation + run |
 | `src/lib/mandev-command-execution.ts` | Env gate |

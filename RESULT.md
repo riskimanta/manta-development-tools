@@ -1,15 +1,17 @@
-# ManDev — Run Profiles Phase 3 (complete)
+# ManDev — Run Profiles Phase 4A (Refresh recent runs)
 
 ## Status
 
-**Run Profiles Phase 3 is DONE.** Slices 3A–3D shipped and verified.
+**Phase 4A polish shipped:** compact “Refresh recent runs” control on each Run Profile card’s Recent Runs section.
 
 | Slice | Delivered |
 |-------|-----------|
-| 3A | Managed Start/Stop/Restart, status/log polling, last run result UI |
-| 3B | Safe stop process group (macOS/Linux), stale app/server restart notice, stale notice copy fix |
-| 3C | Persistent `ProjectRunProfileRun` history, Recent Runs UI |
-| 3D | Stale run-history recovery on boot (`starting` / `running` / `stopping` → `stale`) |
+| 4A | Manual refresh via `router.refresh()` — no SSE, polling, or schema changes |
+
+## What changed
+
+- **`RefreshRecentRunsButton`** — tiny client component calls Next.js `router.refresh()` with a pending spinner state.
+- **`RunProfileRecentRuns`** — header row shows the refresh control beside “Recent runs”; works with empty history.
 
 ## Validation
 
@@ -19,28 +21,16 @@
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
-### Verified manually
+### Expected behavior
 
-- Safe stop process group killed shell + child process
-- Stale app restart notice after dev server restart
-- Stale notice copy no longer showed misleading “Process is running.”
-- Run history persisted to SQLite; completed runs finalized
-- Recent Runs UI showed persisted history after refresh
-- Active stale recovery marked orphaned rows `STALE`, not `STARTING`
-- Orphan test OS processes cleaned manually after restart tests
+- Click **Refresh recent runs** on a profile row → server-rendered recent run history reloads without full browser reload.
+- Empty “No run history yet.” state still shows the refresh control.
+- Managed Start/Stop/Restart and Phase 2A short execution unchanged.
 
 ## Documentation
 
-- **`docs/features/run-profiles-phase-3.md`** — Phase 3 completion checkpoint added; status set to DONE; checklists and limitations updated.
-
-## Known limitations (Phase 4 candidates)
-
-- Recent Runs requires page refresh; no SSE/WebSocket
-- Live process state remains in-memory only
-- Orphan OS processes may survive app restart; manual cleanup may be needed
-- No full run detail page; previews only in DB
-- Phase 2A short command execution remains separate from managed run history
+- **`docs/features/run-profiles-phase-3.md`** — Phase 4A notes added; Phase 3 limitations updated.
 
 ## Schema / migration
 
-None in this checkpoint. Uses existing `ProjectRunProfileRun` model from Phase 3C.
+None.
