@@ -1,29 +1,30 @@
-# ManDev — Fix managed run history persistence
+# ManDev — Run history persistence fix (PR open)
 
-## Bug summary
+## Bug / fix summary
 
-After Phase 4B merge, a completed managed run (`View All Runs Test`, PID 72552, exit 0, ~2s) showed correctly in the managed process UI but **did not appear** in Recent Runs or View All Runs. Only an older `STALE` / `APP_RESTART` row (~388ms) remained.
+Completed managed runs did not appear in Recent Runs or View All Runs when boot recovery/HMR marked the in-flight row `stale` before spawn/finalize finished. Finalization only looked for rows with `endedAt: null`, so the completed process had no open DB row to update.
 
-## Root cause
+Fix:
+- Match open run rows by active statuses (`starting` / `running` / `stopping`), not `endedAt: null`
+- Skip boot stale recovery for profiles with active managed process snapshots
+- Create a finalized history row from terminal snapshot when no open row exists
 
-1. `createRunProfileRunForManagedStart` created a `starting` row on managed Start.
-2. Dev boot recovery (`markActiveRunProfileRunsStaleOnBoot`) ran again (e.g. HMR/module reload) and marked that in-flight row `stale` with `endedAt` set (~388ms after start).
-3. `findOpenRunProfileRun` only matched rows with `endedAt: null`, so spawn/finalize lifecycle handlers could not find an open row.
-4. In-memory process manager still reported `Exited`, but DB finalization was a no-op — history never got the completed run.
+## Branch
 
-SQLite confirmed one row for the profile: `stale`, `APP_RESTART`, no PID, no stdout preview.
+`fix/run-profiles-managed-run-history-persistence`
 
-## Fix summary
+## Commit
 
-- **`findOpenRunProfileRun`**: match active statuses (`starting` / `running` / `stopping`) instead of `endedAt: null`, so stale rows are never selected.
-- **`markActiveRunProfileRunsStaleOnBoot`**: skip run profiles that still have an active managed process in `runProfileProcessManager`.
-- **`finalizeRunProfileRunFromSnapshot`**: if no open row exists (e.g. boot recovery already closed it), create a finalized history row from the terminal snapshot (pid, exit, duration, stdout/stderr previews).
+`39afb75b784ed05bbe1eb01d2c352c2365ea6e0a`
 
-## Changed files
+## PR
 
-- `src/services/run-profile-run-history.ts`
-- `src/services/run-profile-run-history.test.ts`
-- `RESULT.md`
+| Item | Value |
+|------|--------|
+| URL | https://github.com/riskimanta/manta-development-tools/pull/11 |
+| Title | fix: persist managed run history after stale rows |
+| State | OPEN |
+| Mergeable | Yes — MERGEABLE, merge state CLEAN, no conflicts |
 
 ## Validation
 
@@ -38,15 +39,13 @@ SQLite confirmed one row for the profile: `stale`, `APP_RESTART`, no PID, no std
 - No DB schema changes
 - No migration
 - No SSE/WebSocket
-- Phase 2A short command execution unchanged
 - Managed Start/Stop/Restart UX unchanged
+- Phase 2A short command execution unchanged
 
-## Git branch/status
+## Git status
 
 ```
-Branch: fix/run-profiles-managed-run-history-persistence
-Commit: 39afb75b784ed05bbe1eb01d2c352c2365ea6e0a
-Pushed: origin/fix/run-profiles-managed-run-history-persistence
-PR: https://github.com/riskimanta/manta-development-tools/pull/new/fix/run-profiles-managed-run-history-persistence
-Working tree: clean
+On branch fix/run-profiles-managed-run-history-persistence
+Your branch is up to date with 'origin/fix/run-profiles-managed-run-history-persistence'.
+nothing to commit, working tree clean
 ```
