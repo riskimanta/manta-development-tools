@@ -1,30 +1,36 @@
-# ManDev — Run Profiles Phase 4B (View all runs)
+# ManDev — Run history persistence fix (PR open)
 
-## Status
+## Bug / fix summary
 
-**Phase 4B merged to `main`.** PR #10 merged cleanly; feature and docs branches cleaned up.
+Completed managed runs did not appear in Recent Runs or View All Runs when boot recovery/HMR marked the in-flight row `stale` before spawn/finalize finished. Finalization only looked for rows with `endedAt: null`, so the completed process had no open DB row to update.
+
+Fix:
+- Match open run rows by active statuses (`starting` / `running` / `stopping`), not `endedAt: null`
+- Skip boot stale recovery for profiles with active managed process snapshots
+- Create a finalized history row from terminal snapshot when no open row exists
+
+## Branch
+
+`fix/run-profiles-managed-run-history-persistence`
+
+## Commit
+
+`39afb75b784ed05bbe1eb01d2c352c2365ea6e0a`
+
+## PR
 
 | Item | Value |
 |------|--------|
-| Phase | 4B — View all runs page |
-| PR | [#10](https://github.com/riskimanta/manta-development-tools/pull/10) — **MERGED** |
-| Merge commit | `2884d40e1426e399d10b2e4c506689117b941b75` |
-| Feature commit | `5bb1a601eb8299dad4f79b8e31fc5e8cb6f79d02` |
-| Branch cleanup | Local `feat/run-profiles-view-all-runs` — not present; remote — deleted by GitHub on merge |
-
-## Delivered
-
-- “View all runs” link beside each Run Profile Recent Runs section
-- History page: `/projects/[id]/run-profiles/[runProfileId]/runs`
-- Shared `RunProfileRunList` for Recent Runs and full history view
-- `getRunProfileRunHistoryPageData` with project ownership validation
-- `RUN_PROFILE_ALL_RUNS_PAGE_LIMIT = 25`
+| URL | https://github.com/riskimanta/manta-development-tools/pull/11 |
+| Title | fix: persist managed run history after stale rows |
+| State | OPEN |
+| Mergeable | Yes — MERGEABLE, merge state CLEAN, no conflicts |
 
 ## Validation
 
 | Check | Result |
 |-------|--------|
-| `pnpm test` | Pass — 391 tests |
+| `pnpm test` | Pass — 395 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
@@ -33,13 +39,13 @@
 - No DB schema changes
 - No migration
 - No SSE/WebSocket
-- Managed Start/Stop/Restart unchanged
+- Managed Start/Stop/Restart UX unchanged
 - Phase 2A short command execution unchanged
 
 ## Git status
 
 ```
-On branch main
-Your branch is up to date with 'origin/main'.
+On branch fix/run-profiles-managed-run-history-persistence
+Your branch is up to date with 'origin/fix/run-profiles-managed-run-history-persistence'.
 nothing to commit, working tree clean
 ```

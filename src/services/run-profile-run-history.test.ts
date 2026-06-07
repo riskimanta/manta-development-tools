@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/lib/db";
 import type { RunProfileManagedProcessSnapshot } from "@/lib/run-profile-process-manager";
+import { runProfileProcessManager } from "@/lib/run-profile-process-manager";
 
 import {
   createRunProfileRunForManagedStart,
@@ -24,6 +25,18 @@ vi.mock("@/lib/db", () => ({
     $transaction: vi.fn(),
   },
 }));
+
+vi.mock("@/lib/run-profile-process-manager", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/run-profile-process-manager")>();
+
+  return {
+    ...actual,
+    runProfileProcessManager: {
+      listSnapshots: vi.fn(() => []),
+    },
+  };
+});
 
 const baseSnapshot: RunProfileManagedProcessSnapshot = {
   runProfileId: "rp-1",
@@ -105,6 +118,13 @@ describe("createRunProfileRunForManagedStart", () => {
     });
   });
 
+  it("creates a new run row even when a stale row already exists for the profile", async () => {
+    await createRunProfileRunForManagedStart(baseSnapshot);
+
+    expect(db.projectRunProfileRun.create).toHaveBeenCalledTimes(1);
+    expect(db.projectRunProfileRun.findFirst).not.toHaveBeenCalled();
+  });
+
   it("does not throw when create fails", async () => {
     vi.mocked(db.projectRunProfileRun.create).mockRejectedValue(
       new Error("db down"),
@@ -131,6 +151,13 @@ describe("updateRunProfileRunOnSpawn", () => {
       message: "Process is running.",
     });
 
+    expect(db.projectRunProfileRun.findFirst).toHaveBeenCalledWith({
+      where: {
+        runProfileId: "rp-1",
+        status: { in: ["starting", "running", "stopping"] },
+      },
+      orderBy: { startedAt: "desc" },
+    });
     expect(db.projectRunProfileRun.update).toHaveBeenCalledWith({
       where: { id: "run-1" },
       data: {
@@ -138,6 +165,18 @@ describe("updateRunProfileRunOnSpawn", () => {
         pid: 1234,
       },
     });
+  });
+
+  it("does not update stale rows when no open run exists", async () => {
+    vi.mocked(db.projectRunProfileRun.findFirst).mockResolvedValue(null);
+
+    await updateRunProfileRunOnSpawn({
+      ...baseSnapshot,
+      status: "running",
+      pid: 1234,
+    });
+
+    expect(db.projectRunProfileRun.update).not.toHaveBeenCalled();
   });
 
   it("no-ops when no open run exists", async () => {
@@ -170,6 +209,13 @@ describe("finalizeRunProfileRunFromSnapshot", () => {
       message: "Process exited with code 0.",
     });
 
+    expect(db.projectRunProfileRun.findFirst).toHaveBeenCalledWith({
+      where: {
+        runProfileId: "rp-1",
+        status: { in: ["starting", "running", "stopping"] },
+      },
+      orderBy: { startedAt: "desc" },
+    });
     expect(db.projectRunProfileRun.update).toHaveBeenCalledWith({
       where: { id: "run-1" },
       data: expect.objectContaining({
@@ -179,6 +225,39 @@ describe("finalizeRunProfileRunFromSnapshot", () => {
         durationMs: 10_000,
         stdoutPreview: "ready",
         stderrPreview: "warn",
+      }),
+    });
+    expect(db.projectRunProfileRun.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a finalized run row when boot recovery already closed the open run", async () => {
+    vi.mocked(db.projectRunProfileRun.findFirst).mockResolvedValue(null);
+
+    await finalizeRunProfileRunFromSnapshot({
+      ...baseSnapshot,
+      status: "exited",
+      pid: 72552,
+      exitCode: 0,
+      exitedAt: "2026-01-01T00:00:02.000Z",
+      logs: {
+        stdout: "view all runs pid 72552\nview all runs done",
+        stderr: "",
+        stdoutTruncated: false,
+        stderrTruncated: false,
+      },
+      message: "Process exited with code 0.",
+    });
+
+    expect(db.projectRunProfileRun.update).not.toHaveBeenCalled();
+    expect(db.projectRunProfileRun.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        runProfileId: "rp-1",
+        status: "exited",
+        pid: 72552,
+        exitCode: 0,
+        durationMs: 2_000,
+        stdoutPreview: "view all runs pid 72552\nview all runs done",
+        stderrPreview: null,
       }),
     });
   });
@@ -202,6 +281,11 @@ describe("finalizeRunProfileRunFromSnapshot", () => {
     });
 
     expect(db.projectRunProfileRun.update).not.toHaveBeenCalled();
+    expect(db.projectRunProfileRun.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        status: "stopped",
+      }),
+    });
   });
 });
 
@@ -266,16 +350,12 @@ describe("markActiveRunProfileRunsStaleOnBoot", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-07T12:00:00.000Z"));
+    vi.mocked(runProfileProcessManager.listSnapshots).mockReturnValue([]);
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
-
-  const activeStatusesWhere = {
-    where: { status: { in: ["starting", "running", "stopping"] } },
-    select: { id: true, startedAt: true },
-  };
 
   const staleUpdate = (id: string, durationMs: number) =>
     db.projectRunProfileRun.update({
@@ -301,13 +381,39 @@ describe("markActiveRunProfileRunsStaleOnBoot", () => {
 
     const count = await markActiveRunProfileRunsStaleOnBoot();
 
-    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith(
-      activeStatusesWhere,
-    );
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith({
+      where: { status: { in: ["starting", "running", "stopping"] } },
+      select: { id: true, startedAt: true },
+    });
     expect(db.$transaction).toHaveBeenCalledWith([
       staleUpdate("run-running", 60_000),
     ]);
     expect(count).toBe(1);
+  });
+
+  it("leaves active managed run rows unchanged during boot recovery", async () => {
+    vi.mocked(runProfileProcessManager.listSnapshots).mockReturnValue([
+      {
+        ...baseSnapshot,
+        status: "running",
+        pid: 72552,
+        message: "Process is running.",
+      },
+    ]);
+
+    vi.mocked(db.projectRunProfileRun.findMany).mockResolvedValue([]);
+
+    const count = await markActiveRunProfileRunsStaleOnBoot();
+
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith({
+      where: {
+        status: { in: ["starting", "running", "stopping"] },
+        runProfileId: { notIn: ["rp-1"] },
+      },
+      select: { id: true, startedAt: true },
+    });
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(count).toBe(0);
   });
 
   it("marks starting rows stale with restart signal and duration", async () => {
@@ -323,9 +429,10 @@ describe("markActiveRunProfileRunsStaleOnBoot", () => {
 
     const count = await markActiveRunProfileRunsStaleOnBoot();
 
-    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith(
-      activeStatusesWhere,
-    );
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith({
+      where: { status: { in: ["starting", "running", "stopping"] } },
+      select: { id: true, startedAt: true },
+    });
     expect(db.$transaction).toHaveBeenCalledWith([
       staleUpdate("run-starting", 90_000),
     ]);
@@ -356,9 +463,10 @@ describe("markActiveRunProfileRunsStaleOnBoot", () => {
 
     const count = await markActiveRunProfileRunsStaleOnBoot();
 
-    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith(
-      activeStatusesWhere,
-    );
+    expect(db.projectRunProfileRun.findMany).toHaveBeenCalledWith({
+      where: { status: { in: ["starting", "running", "stopping"] } },
+      select: { id: true, startedAt: true },
+    });
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(count).toBe(0);
   });
