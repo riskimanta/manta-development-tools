@@ -1,3 +1,4 @@
+import { RefreshRecentRunsButton } from "@/components/projects/refresh-recent-runs-button";
 import { Badge } from "@/components/ui/badge";
 import type { RunProfileRunRecord } from "@/lib/run-profile-run-history-types";
 import {
@@ -77,7 +78,10 @@ function RunProfileRecentRunItem({ run }: { run: RunProfileRunRecord }) {
 export function RunProfileRecentRuns({ recentRuns, className }: Props) {
   return (
     <div className={className}>
-      <p className="text-[11px] font-medium text-muted-foreground">Recent runs</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] font-medium text-muted-foreground">Recent runs</p>
+        <RefreshRecentRunsButton />
+      </div>
       {recentRuns.length === 0 ? (
         <p className="mt-1 text-[11px] text-muted-foreground">
           No run history yet.
