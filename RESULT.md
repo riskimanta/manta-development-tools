@@ -1,30 +1,30 @@
-# ManDev — Run history persistence fix (PR open)
+# ManDev — Run history persistence fix (merged)
 
-## Bug / fix summary
+## Fix status
 
-Completed managed runs did not appear in Recent Runs or View All Runs when boot recovery/HMR marked the in-flight row `stale` before spawn/finalize finished. Finalization only looked for rows with `endedAt: null`, so the completed process had no open DB row to update.
-
-Fix:
-- Match open run rows by active statuses (`starting` / `running` / `stopping`), not `endedAt: null`
-- Skip boot stale recovery for profiles with active managed process snapshots
-- Create a finalized history row from terminal snapshot when no open row exists
-
-## Branch
-
-`fix/run-profiles-managed-run-history-persistence`
-
-## Commit
-
-`39afb75b784ed05bbe1eb01d2c352c2365ea6e0a`
+**Merged to `main`.** Managed run history now persists after boot recovery/HMR marks an in-flight row stale.
 
 ## PR
 
 | Item | Value |
 |------|--------|
-| URL | https://github.com/riskimanta/manta-development-tools/pull/11 |
+| PR | [#11](https://github.com/riskimanta/manta-development-tools/pull/11) — **MERGED** |
 | Title | fix: persist managed run history after stale rows |
-| State | OPEN |
-| Mergeable | Yes — MERGEABLE, merge state CLEAN, no conflicts |
+| Merge commit | `9bfee948bdf1fea85a2e5e4d33b360f546c3ad54` |
+| Fix commit | `39afb75b784ed05bbe1eb01d2c352c2365ea6e0a` |
+
+## What shipped
+
+- Match open run rows by active statuses, not `endedAt: null`
+- Skip boot stale recovery for profiles with active managed process snapshots
+- Create finalized history row from terminal snapshot when no open row exists
+
+## Cleanup
+
+| Item | Result |
+|------|--------|
+| Local branch `fix/run-profiles-managed-run-history-persistence` | Deleted |
+| Remote branch `fix/run-profiles-managed-run-history-persistence` | Deleted |
 
 ## Validation
 
@@ -45,7 +45,7 @@ Fix:
 ## Git status
 
 ```
-On branch fix/run-profiles-managed-run-history-persistence
-Your branch is up to date with 'origin/fix/run-profiles-managed-run-history-persistence'.
+On branch main
+Your branch is up to date with 'origin/main'.
 nothing to commit, working tree clean
 ```
