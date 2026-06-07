@@ -1,30 +1,35 @@
-# ManDev — Run Profiles Phase 4B (View all runs)
+# ManDev — Fix managed run history persistence
 
-## Status
+## Bug summary
 
-**Phase 4B merged to `main`.** PR #10 merged cleanly; feature and docs branches cleaned up.
+After Phase 4B merge, a completed managed run (`View All Runs Test`, PID 72552, exit 0, ~2s) showed correctly in the managed process UI but **did not appear** in Recent Runs or View All Runs. Only an older `STALE` / `APP_RESTART` row (~388ms) remained.
 
-| Item | Value |
-|------|--------|
-| Phase | 4B — View all runs page |
-| PR | [#10](https://github.com/riskimanta/manta-development-tools/pull/10) — **MERGED** |
-| Merge commit | `2884d40e1426e399d10b2e4c506689117b941b75` |
-| Feature commit | `5bb1a601eb8299dad4f79b8e31fc5e8cb6f79d02` |
-| Branch cleanup | Local `feat/run-profiles-view-all-runs` — not present; remote — deleted by GitHub on merge |
+## Root cause
 
-## Delivered
+1. `createRunProfileRunForManagedStart` created a `starting` row on managed Start.
+2. Dev boot recovery (`markActiveRunProfileRunsStaleOnBoot`) ran again (e.g. HMR/module reload) and marked that in-flight row `stale` with `endedAt` set (~388ms after start).
+3. `findOpenRunProfileRun` only matched rows with `endedAt: null`, so spawn/finalize lifecycle handlers could not find an open row.
+4. In-memory process manager still reported `Exited`, but DB finalization was a no-op — history never got the completed run.
 
-- “View all runs” link beside each Run Profile Recent Runs section
-- History page: `/projects/[id]/run-profiles/[runProfileId]/runs`
-- Shared `RunProfileRunList` for Recent Runs and full history view
-- `getRunProfileRunHistoryPageData` with project ownership validation
-- `RUN_PROFILE_ALL_RUNS_PAGE_LIMIT = 25`
+SQLite confirmed one row for the profile: `stale`, `APP_RESTART`, no PID, no stdout preview.
+
+## Fix summary
+
+- **`findOpenRunProfileRun`**: match active statuses (`starting` / `running` / `stopping`) instead of `endedAt: null`, so stale rows are never selected.
+- **`markActiveRunProfileRunsStaleOnBoot`**: skip run profiles that still have an active managed process in `runProfileProcessManager`.
+- **`finalizeRunProfileRunFromSnapshot`**: if no open row exists (e.g. boot recovery already closed it), create a finalized history row from the terminal snapshot (pid, exit, duration, stdout/stderr previews).
+
+## Changed files
+
+- `src/services/run-profile-run-history.ts`
+- `src/services/run-profile-run-history.test.ts`
+- `RESULT.md`
 
 ## Validation
 
 | Check | Result |
 |-------|--------|
-| `pnpm test` | Pass — 391 tests |
+| `pnpm test` | Pass — 395 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
@@ -33,13 +38,12 @@
 - No DB schema changes
 - No migration
 - No SSE/WebSocket
-- Managed Start/Stop/Restart unchanged
 - Phase 2A short command execution unchanged
+- Managed Start/Stop/Restart UX unchanged
 
-## Git status
+## Git branch/status
 
 ```
-On branch main
-Your branch is up to date with 'origin/main'.
-nothing to commit, working tree clean
+Branch: fix/run-profiles-managed-run-history-persistence
+Base: main (up to date with origin/main)
 ```

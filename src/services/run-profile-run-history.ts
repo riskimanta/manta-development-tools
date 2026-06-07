@@ -7,9 +7,10 @@ import {
   type RunProfileRunRecord,
 } from "@/lib/run-profile-run-history-types";
 import { RUN_PROFILE_ALL_RUNS_PAGE_LIMIT } from "@/lib/run-profile-run-history-ui";
-import type {
-  RunProfileManagedProcessSnapshot,
-  RunProfileManagedProcessStatus,
+import {
+  runProfileProcessManager,
+  type RunProfileManagedProcessSnapshot,
+  type RunProfileManagedProcessStatus,
 } from "@/lib/run-profile-process-manager";
 
 const DEFAULT_RUN_HISTORY_LIMIT = RUN_PROFILE_ALL_RUNS_PAGE_LIMIT;
@@ -19,6 +20,8 @@ const TERMINAL_RUN_STATUSES: RunProfileManagedProcessStatus[] = [
   "failed",
   "exited",
 ];
+
+const OPEN_RUN_STATUSES = ["starting", "running", "stopping"] as const;
 
 function logRunHistoryError(context: string, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
@@ -93,12 +96,27 @@ async function findOpenRunProfileRun(runProfileId: string) {
   return db.projectRunProfileRun.findFirst({
     where: {
       runProfileId,
-      endedAt: null,
+      status: { in: [...OPEN_RUN_STATUSES] },
     },
     orderBy: {
       startedAt: "desc",
     },
   });
+}
+
+function isOpenRunStatus(
+  status: RunProfileManagedProcessStatus,
+): status is (typeof OPEN_RUN_STATUSES)[number] {
+  return (OPEN_RUN_STATUSES as readonly RunProfileManagedProcessStatus[]).includes(
+    status,
+  );
+}
+
+function getActiveManagedRunProfileIds(): string[] {
+  return runProfileProcessManager
+    .listSnapshots()
+    .filter((snapshot) => isOpenRunStatus(snapshot.status))
+    .map((snapshot) => snapshot.runProfileId);
 }
 
 export async function createRunProfileRunForManagedStart(
@@ -149,20 +167,40 @@ export async function finalizeRunProfileRunFromSnapshot(
   }
 
   try {
+    const endedAt = resolveSnapshotEndedAt(snapshot);
+    const { stdoutPreview, stderrPreview } = buildLogPreviews(snapshot);
     const openRun = await findOpenRunProfileRun(snapshot.runProfileId);
-    if (!openRun) {
+
+    if (openRun) {
+      const durationMs = computeDurationMs(openRun.startedAt, endedAt);
+
+      await db.projectRunProfileRun.update({
+        where: { id: openRun.id },
+        data: {
+          status: snapshot.status,
+          pid: snapshot.pid,
+          endedAt,
+          exitCode: snapshot.exitCode,
+          signal: snapshot.signal,
+          durationMs,
+          stdoutPreview,
+          stderrPreview,
+        },
+      });
       return;
     }
 
-    const endedAt = resolveSnapshotEndedAt(snapshot);
-    const durationMs = computeDurationMs(openRun.startedAt, endedAt);
-    const { stdoutPreview, stderrPreview } = buildLogPreviews(snapshot);
+    const startedAt = parseSnapshotStartedAt(snapshot);
+    const durationMs = computeDurationMs(startedAt, endedAt);
 
-    await db.projectRunProfileRun.update({
-      where: { id: openRun.id },
+    await db.projectRunProfileRun.create({
       data: {
+        runProfileId: snapshot.runProfileId,
         status: snapshot.status,
+        command: snapshot.command,
+        workingDirectory: snapshot.workingDirectory,
         pid: snapshot.pid,
+        startedAt,
         endedAt,
         exitCode: snapshot.exitCode,
         signal: snapshot.signal,
@@ -206,8 +244,14 @@ const BOOT_STALE_RUN_STATUSES = ["starting", "running", "stopping"] as const;
 export async function markActiveRunProfileRunsStaleOnBoot(): Promise<number> {
   try {
     const now = new Date();
+    const activeManagedRunProfileIds = getActiveManagedRunProfileIds();
     const activeRows = await db.projectRunProfileRun.findMany({
-      where: { status: { in: [...BOOT_STALE_RUN_STATUSES] } },
+      where: {
+        status: { in: [...BOOT_STALE_RUN_STATUSES] },
+        ...(activeManagedRunProfileIds.length > 0
+          ? { runProfileId: { notIn: activeManagedRunProfileIds } }
+          : {}),
+      },
       select: { id: true, startedAt: true },
     });
 
