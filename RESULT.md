@@ -45,5 +45,8 @@ SQLite confirmed one row for the profile: `stale`, `APP_RESTART`, no PID, no std
 
 ```
 Branch: fix/run-profiles-managed-run-history-persistence
-Base: main (up to date with origin/main)
+Commit: 39afb75b784ed05bbe1eb01d2c352c2365ea6e0a
+Pushed: origin/fix/run-profiles-managed-run-history-persistence
+PR: https://github.com/riskimanta/manta-development-tools/pull/new/fix/run-profiles-managed-run-history-persistence
+Working tree: clean
 ```
