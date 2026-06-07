@@ -1,30 +1,23 @@
-# ManDev — Run history persistence fix (merged)
+# ManDev — Run Profiles Phase 4 checkpoint (stable)
 
-## Fix status
+## Status
 
-**Merged to `main`.** Managed run history now persists after boot recovery/HMR marks an in-flight row stale.
+**Phase 3 closed.** Phase 4A, Phase 4B, and PR #11 are merged to `main`. Manual verification passed. Repo clean.
 
-## PR
+## Delivered
 
-| Item | Value |
+| Item | Status |
 |------|--------|
-| PR | [#11](https://github.com/riskimanta/manta-development-tools/pull/11) — **MERGED** |
-| Title | fix: persist managed run history after stale rows |
-| Merge commit | `9bfee948bdf1fea85a2e5e4d33b360f546c3ad54` |
-| Fix commit | `39afb75b784ed05bbe1eb01d2c352c2365ea6e0a` |
+| Phase 3 | **Closed** (3A–3D complete) |
+| Phase 4A — Refresh Recent Runs | **Merged** (`router.refresh()`) |
+| Phase 4B — View All Runs page | **Merged** |
+| PR [#11](https://github.com/riskimanta/manta-development-tools/pull/11) — run history persistence fix | **Merged** |
 
-## What shipped
+## Manual verification
 
-- Match open run rows by active statuses, not `endedAt: null`
-- Skip boot stale recovery for profiles with active managed process snapshots
-- Create finalized history row from terminal snapshot when no open row exists
-
-## Cleanup
-
-| Item | Result |
-|------|--------|
-| Local branch `fix/run-profiles-managed-run-history-persistence` | Deleted |
-| Remote branch `fix/run-profiles-managed-run-history-persistence` | Deleted |
+- Recent Runs: newest `EXITED` run above older `STALE` rows
+- View All Runs: same ordering with stdout/stderr previews
+- Test Run Profile deleted from UI (local SQLite/UI data only; no commit needed)
 
 ## Validation
 
@@ -34,13 +27,14 @@
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
-## Notes
+## Known limitations
 
-- No DB schema changes
-- No migration
-- No SSE/WebSocket
-- Managed Start/Stop/Restart UX unchanged
-- Phase 2A short command execution unchanged
+- No automatic Recent Runs updates — manual refresh or page reload; no SSE/WebSocket
+- Live process state in-memory — registry and log buffers lost on ManDev server restart
+- Orphan OS processes may persist after app restart; manual cleanup may be required
+- No per-run detail page; history shows compact previews only (max 25 runs)
+- No persisted full logs — DB stores stdout/stderr previews only
+- Phase 2A short execution (30s) unchanged and separate from managed run history
 
 ## Git status
 

@@ -47,6 +47,18 @@ Phase 3 is officially complete. All planned slices (3A–3D) shipped via merged 
 - **Empty state:** “No run history yet.” on the history page when no rows exist.
 - **Not included:** pagination, filters, charts, schema changes, SSE/WebSocket, or changes to managed Start/Stop/Restart or Phase 2A short execution.
 
+### Post-4B fix — run history persistence (PR #11, merged)
+
+- **Problem:** Dev boot recovery/HMR could mark an in-flight `starting` row `stale` before spawn/finalize completed; finalization only matched rows with `endedAt: null`, so completed managed runs never appeared in Recent Runs or View All Runs.
+- **Fix:** `findOpenRunProfileRun` matches active statuses (`starting` / `running` / `stopping`); boot stale recovery skips profiles with active managed process snapshots; `finalizeRunProfileRunFromSnapshot` creates a finalized row from the terminal snapshot when no open row exists.
+- **Verified manually:** completed managed run shows as newest `EXITED` above older `STALE` rows on Recent Runs and View All Runs.
+
+### Phase 4 checkpoint — manual verification (complete)
+
+- Recent Runs: newest `EXITED` run above older `STALE` rows after managed completion
+- View All Runs page: same ordering and stdout/stderr previews
+- Local test Run Profile removed from UI after verification (no commit for SQLite/UI test data)
+
 ### Remaining limitations / Phase 4 candidates
 
 - **No automatic Recent Runs updates** — manual refresh or full page reload; no SSE or WebSocket live updates
@@ -64,7 +76,7 @@ Phase 3 is officially complete. All planned slices (3A–3D) shipped via merged 
 
 | Check | Result |
 |-------|--------|
-| `pnpm test` | Pass — 387 tests |
+| `pnpm test` | Pass — 395 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
@@ -523,8 +535,8 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 
 ### Phase 3D — stale run-history recovery on boot (implemented)
 
-- **Service:** `markActiveRunProfileRunsStaleOnBoot()` in `src/services/run-profile-run-history.ts` — on app/server boot, rows with `status` in `starting`, `running`, or `stopping` are updated to `stale`, with `endedAt`, `durationMs`, and `signal = "APP_RESTART"`. stdout/stderr previews are preserved.
-- **Integration:** invoked once from `src/services/run-profiles.ts` when managed run-profile services register (same module as lifecycle handler); idempotent and non-throwing on DB failure.
+- **Service:** `markActiveRunProfileRunsStaleOnBoot()` in `src/services/run-profile-run-history.ts` — on app/server boot, rows with `status` in `starting`, `running`, or `stopping` are updated to `stale`, with `endedAt`, `durationMs`, and `signal = "APP_RESTART"`. stdout/stderr previews are preserved. Skips run profiles that still have an active managed process snapshot (PR #11).
+- **Integration:** invoked once from `src/services/run-profiles.ts` when managed run-profile services register (same module as lifecycle handler); idempotent and non-throwing on DB failure. Lifecycle finalization matches open rows by active status and can create a finalized row when boot recovery already closed the in-flight row (PR #11).
 - **UI:** Recent Runs shows **Stale** badge and compact **app restart** exit summary for recovered rows.
 - **Not included:** schema changes, SSE, full process persistence, or changes to Phase 2A short execution / managed Start/Stop/Restart behavior.
 
