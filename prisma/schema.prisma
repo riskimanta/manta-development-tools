@@ -26,6 +26,7 @@ model Project {
   features     Feature[]
   architecture ProjectArchitecture?
   runProfiles  ProjectRunProfile[]
+  workProgressEntries WorkProgress[]
 
   @@index([updatedAt])
 }
@@ -98,4 +99,26 @@ model Feature {
 
   @@index([projectId])
   @@index([status])
+}
+
+model WorkProgress {
+  id                  String   @id @default(cuid())
+  projectId           String
+  branch              String
+  latestCommitHash    String
+  latestCommitMessage String
+  latestCommitAuthor  String
+  latestCommitDate    DateTime
+  changedFilesJson    String
+  changedFilesCount   Int
+  gitStatusText       String
+  summary             String
+  note                String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, createdAt])
 }

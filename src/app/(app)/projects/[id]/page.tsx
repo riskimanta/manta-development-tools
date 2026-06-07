@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ProjectArchitectureCard } from "@/components/projects/project-architecture-card";
 import { ProjectRunProfilesCard } from "@/components/projects/project-run-profiles-card";
+import { ProjectWorkProgressCard } from "@/components/projects/project-work-progress-card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { getProjectArchitecture } from "@/services/architectures";
 import { getProjectById } from "@/services/projects";
 import { listRunProfilesWithRecentRunsByProjectId } from "@/services/run-profiles";
+import { listWorkProgressByProjectId } from "@/services/work-progress";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -26,9 +28,10 @@ export default async function ProjectDetailPage({ params }: Props) {
   const project = await getProjectById(id);
   if (!project) notFound();
 
-  const [architecture, runProfiles] = await Promise.all([
+  const [architecture, runProfiles, workProgressEntries] = await Promise.all([
     getProjectArchitecture(project.id),
     listRunProfilesWithRecentRunsByProjectId(project.id),
+    listWorkProgressByProjectId(project.id),
   ]);
   const defaultMermaidSource = buildDefaultArchitectureTemplate({
     name: project.name,
@@ -80,6 +83,11 @@ export default async function ProjectDetailPage({ params }: Props) {
           {project.localPath ? (
             <ProjectLocalPathActions localPath={project.localPath} />
           ) : null}
+          <ProjectWorkProgressCard
+            projectId={project.id}
+            localPath={project.localPath}
+            entries={workProgressEntries}
+          />
           <ProjectRunProfilesCard
             projectId={project.id}
             projectName={project.name}
