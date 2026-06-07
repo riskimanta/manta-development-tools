@@ -8,6 +8,7 @@ import {
   createRunProfileRunForManagedStart,
   finalizeRunProfileRunFromSnapshot,
   getLatestRunProfileRun,
+  getRunProfileRunById,
   listRunProfileRuns,
   markActiveRunProfileRunsStaleOnBoot,
   toRunProfileRunRecord,
@@ -21,6 +22,7 @@ vi.mock("@/lib/db", () => ({
       update: vi.fn(),
       findFirst: vi.fn(),
       findMany: vi.fn(),
+      findUnique: vi.fn(),
     },
     $transaction: vi.fn(),
   },
@@ -342,6 +344,30 @@ describe("getLatestRunProfileRun", () => {
     vi.mocked(db.projectRunProfileRun.findFirst).mockResolvedValue(null);
 
     await expect(getLatestRunProfileRun("rp-1")).resolves.toBeNull();
+  });
+});
+
+describe("getRunProfileRunById", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns a serializable run record when the row exists", async () => {
+    vi.mocked(db.projectRunProfileRun.findUnique).mockResolvedValue(mockRunRow);
+
+    const result = await getRunProfileRunById("run-1");
+
+    expect(db.projectRunProfileRun.findUnique).toHaveBeenCalledWith({
+      where: { id: "run-1" },
+    });
+    expect(result?.id).toBe("run-1");
+    expect(result?.startedAt).toBe("2026-01-01T00:00:00.000Z");
+  });
+
+  it("returns null when the run row is missing", async () => {
+    vi.mocked(db.projectRunProfileRun.findUnique).mockResolvedValue(null);
+
+    await expect(getRunProfileRunById("missing")).resolves.toBeNull();
   });
 });
 

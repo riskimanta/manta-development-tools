@@ -47,6 +47,14 @@ Phase 3 is officially complete. All planned slices (3A–3D) shipped via merged 
 - **Empty state:** “No run history yet.” on the history page when no rows exist.
 - **Not included:** pagination, filters, charts, schema changes, SSE/WebSocket, or changes to managed Start/Stop/Restart or Phase 2A short execution.
 
+### Phase 4C — per-run detail page (implemented)
+
+- **UI:** “View details” link on each item in the View All Runs list.
+- **Route:** `/projects/[id]/run-profiles/[runProfileId]/runs/[runId]` — project/profile context, run status, PID, timestamps, duration, exit/signal, and stdout/stderr previews in readable pre/code blocks.
+- **Service:** `getRunProfileRunDetailPageData` validates project ownership, profile ownership, and that the run belongs to the profile; reuses `getRunProfileRunById` and existing run-history formatting helpers.
+- **Empty state:** “No output captured.” when stdout/stderr previews are empty.
+- **Not included:** schema changes, full log persistence, SSE/WebSocket, pagination, filters, or changes to managed Start/Stop/Restart or Phase 2A short execution.
+
 ### Post-4B fix — run history persistence (PR #11, merged)
 
 - **Problem:** Dev boot recovery/HMR could mark an in-flight `starting` row `stale` before spawn/finalize completed; finalization only matched rows with `endedAt: null`, so completed managed runs never appeared in Recent Runs or View All Runs.
@@ -64,8 +72,7 @@ Phase 3 is officially complete. All planned slices (3A–3D) shipped via merged 
 - **No automatic Recent Runs updates** — manual refresh or full page reload; no SSE or WebSocket live updates
 - **Live process state in-memory** — managed registry and log buffers lost on ManDev server restart
 - **Orphan OS processes** — child processes may keep running after app restart; manual cleanup may still be required
-- **No per-run detail page** — history page shows compact previews only; no deep link to a single run
-- **No persisted full logs** — DB stores stdout/stderr previews, not complete log files
+- **No persisted full logs** — DB stores stdout/stderr previews, not complete log files; detail page shows the same previews at larger size
 - **Phase 2A short execution separate** — 30s fire-and-wait path unchanged; not linked to managed run history
 - **SSE log streaming** — polling remains the delivery mechanism
 - **Orphan detection / pidfile scan** — not implemented
@@ -76,7 +83,7 @@ Phase 3 is officially complete. All planned slices (3A–3D) shipped via merged 
 
 | Check | Result |
 |-------|--------|
-| `pnpm test` | Pass — 395 tests |
+| `pnpm test` | Pass — 401 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
@@ -595,9 +602,10 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 | `src/app/projects/run-profiles/actions.ts` | `executeRunProfileAction` |
 | `src/components/projects/project-run-profiles-card.tsx` | Profile list, last-run panel, recent run history |
 | `src/components/projects/run-profile-recent-runs.tsx` | Compact persisted run history per profile |
-| `src/components/projects/run-profile-run-list.tsx` | Shared run history list items (Recent Runs + View all runs page) |
+| `src/components/projects/run-profile-run-list.tsx` | Shared run history list items (Recent Runs + View all runs page); optional detail links |
 | `src/components/projects/refresh-recent-runs-button.tsx` | Manual Recent Runs refresh via `router.refresh()` |
 | `src/app/(app)/projects/[id]/run-profiles/[runProfileId]/runs/page.tsx` | View all runs history page (Phase 4B) |
+| `src/app/(app)/projects/[id]/run-profiles/[runProfileId]/runs/[runId]/page.tsx` | Per-run detail page (Phase 4C) |
 | `src/lib/run-profile-run-history-ui.ts` | Run history display helpers |
 | `src/components/projects/run-run-profile-button.tsx` | Confirmation + run |
 | `src/lib/mandev-command-execution.ts` | Env gate |
@@ -606,4 +614,4 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 
 ## Document maintenance
 
-Phase 3 is complete. Future work belongs in Phase 4 planning (SSE, orphan detection, full run detail, persisted logs). Update `path-map.md` and feature index when new run-profile capabilities ship.
+Phase 3 is complete. Future work belongs in Phase 4 planning (SSE, orphan detection, persisted full logs). Update `path-map.md` and feature index when new run-profile capabilities ship.
