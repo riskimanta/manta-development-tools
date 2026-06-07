@@ -1,31 +1,46 @@
-# ManDev — Run Profiles Phase 3D (stale run-history recovery on boot)
+# ManDev — Run Profiles Phase 3 (complete)
 
-## What changed
+## Status
 
-**`src/services/run-profile-run-history.ts`** — Renamed boot recovery to `markActiveRunProfileRunsStaleOnBoot()`; it now finalizes orphaned in-progress rows (`starting`, `running`, `stopping`) as `stale` with `endedAt`, `durationMs`, and `signal = "APP_RESTART"`. DB failures are logged and do not throw.
+**Run Profiles Phase 3 is DONE.** Slices 3A–3D shipped and verified.
 
-**`src/services/run-profiles.ts`** — Calls renamed boot recovery once when managed run-profile lifecycle services register (idempotent guard).
+| Slice | Delivered |
+|-------|-----------|
+| 3A | Managed Start/Stop/Restart, status/log polling, last run result UI |
+| 3B | Safe stop process group (macOS/Linux), stale app/server restart notice, stale notice copy fix |
+| 3C | Persistent `ProjectRunProfileRun` history, Recent Runs UI |
+| 3D | Stale run-history recovery on boot (`starting` / `running` / `stopping` → `stale`) |
 
-**Tests** — Boot recovery cases in `run-profile-run-history.test.ts` cover `starting`, `running`, and `stopping` rows, terminal rows unchanged, and DB failure; mock updated in `run-profiles.test.ts`.
+## Validation
 
-**`docs/features/run-profiles-phase-3.md`** — Phase 3D section and checklist updated for active-status recovery.
+| Check | Result |
+|-------|--------|
+| `pnpm test` | Pass — 387 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
-## Root cause
+### Verified manually
 
-Boot recovery only queried `status = "running"`. If ManDev restarted before spawn/finalize lifecycle updates completed, a run could remain persisted as `starting` and was never recovered.
+- Safe stop process group killed shell + child process
+- Stale app restart notice after dev server restart
+- Stale notice copy no longer showed misleading “Process is running.”
+- Run history persisted to SQLite; completed runs finalized
+- Recent Runs UI showed persisted history after refresh
+- Active stale recovery marked orphaned rows `STALE`, not `STARTING`
+- Orphan test OS processes cleaned manually after restart tests
+
+## Documentation
+
+- **`docs/features/run-profiles-phase-3.md`** — Phase 3 completion checkpoint added; status set to DONE; checklists and limitations updated.
+
+## Known limitations (Phase 4 candidates)
+
+- Recent Runs requires page refresh; no SSE/WebSocket
+- Live process state remains in-memory only
+- Orphan OS processes may survive app restart; manual cleanup may be needed
+- No full run detail page; previews only in DB
+- Phase 2A short command execution remains separate from managed run history
 
 ## Schema / migration
 
-None. Uses existing `ProjectRunProfileRun.status` string field (`stale` is a persisted value, not an enum).
-
-## Known limitations
-
-- History is loaded on page render; refresh required to see updates (no SSE).
-- Live managed process state remains in-memory only; orphan OS processes may still run after restart.
-- Phase 2A short command execution unchanged.
-
-## Test / lint / typecheck status
-
-- `pnpm test`: Pass (387 tests)
-- `pnpm typecheck`: Pass
-- `pnpm lint`: Pass
+None in this checkpoint. Uses existing `ProjectRunProfileRun` model from Phase 3C.

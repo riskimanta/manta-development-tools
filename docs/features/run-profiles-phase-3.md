@@ -1,8 +1,57 @@
 # Project Run Profiles — Phase 3: Process Manager with Logs, Stop, and Restart
 
-**Status:** Phase 3A foundation + service/action wrappers implemented; UI not wired yet  
+**Status:** **DONE** — Phase 3A–3D complete (see [Phase 3 completion checkpoint](#phase-3-completion-checkpoint))  
 **Depends on:** Phase 2A (short-command execution, last-run UI)  
-**Target:** Phase 3A MVP, with Phase 3B follow-ups noted inline
+**Delivered in:** Phase 3A (managed controls + polling UI), 3B (safe stop + stale notice), 3C (run history + Recent Runs UI), 3D (stale active run recovery on boot)
+
+---
+
+## Phase 3 completion checkpoint
+
+Phase 3 is officially complete. All planned slices (3A–3D) shipped via merged PRs and passed automated checks plus manual QA.
+
+### Completed capabilities
+
+| Capability | Phase | Summary |
+|------------|-------|---------|
+| Managed process controls | 3A | Start / Stop / Restart saved run profiles via process manager; status badge and last-run result UI |
+| Logs / status polling | 3A | Client polls Server Actions for snapshot (status + bounded stdout/stderr) while `starting` / `running` / `stopping` |
+| Safe-stop process group | 3B | POSIX `detached` spawn + `kill(-pid)` terminates shell and typical child processes on macOS/Linux |
+| Stale app/server restart notice | 3B | `processManagerBootSessionId` change surfaces amber banner after dev-server restart; copy no longer implies process is still running |
+| Persistent run history | 3C | `ProjectRunProfileRun` rows created on managed start, finalized on stop/exit/fail; stdout/stderr previews only |
+| Recent Runs UI | 3C | Latest runs per profile on Project Detail Run Profiles card; survives page refresh |
+| Stale active run recovery | 3D | On boot, orphaned `starting` / `running` / `stopping` rows finalized as `stale` with `signal = APP_RESTART` |
+
+### Verified manually
+
+- Safe stop process group killed shell + child process
+- Stale app restart notice appeared after dev server restart
+- Stale notice copy no longer showed misleading “Process is running.”
+- Run history persisted to SQLite and finalized completed runs
+- Recent Runs UI displayed persisted run history after refresh
+- Active stale recovery turned app-restart orphaned rows into `STALE`, not `STARTING`
+- Orphan test OS processes were manually cleaned after restart tests
+
+### Remaining limitations / Phase 4 candidates
+
+- **Recent Runs refresh only** — history loads on page render; no SSE or WebSocket live updates
+- **Live process state in-memory** — managed registry and log buffers lost on ManDev server restart
+- **Orphan OS processes** — child processes may keep running after app restart; manual cleanup may still be required
+- **No full run detail page** — Recent Runs shows compact previews only
+- **No persisted full logs** — DB stores stdout/stderr previews, not complete log files
+- **Phase 2A short execution separate** — 30s fire-and-wait path unchanged; not linked to managed run history
+- **SSE log streaming** — polling remains the delivery mechanism
+- **Orphan detection / pidfile scan** — not implemented
+- **Bind-address exposure warning automation** — manual/documented only
+- **Clear “Run once” vs “Start server” UI separation** — deferred
+
+### Final health check
+
+| Check | Result |
+|-------|--------|
+| `pnpm test` | Pass — 387 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
 ---
 
@@ -31,8 +80,8 @@ Phase 2A **short-command execution** (30s timeout, fire-and-wait) remains availa
 - Remote or multi-machine execution
 - Production-grade process orchestration (systemd, Docker Swarm, Kubernetes)
 - Multi-user concurrency guarantees across ManDev instances
-- Persistent run history or log files in the database (MVP)
-- Automatic orphan cleanup across ManDev server restarts (MVP limitation, documented)
+- Full log file persistence or run detail pages (previews only in 3C)
+- Automatic orphan OS process cleanup across ManDev server restarts (documented limitation)
 - Windows-first process-tree killing (Windows still uses direct child kill; Unix uses process groups in Phase 3B)
 
 ---
@@ -280,7 +329,7 @@ Polling contract:
 | Truncation indicator | When older lines drop, prefix snapshot with `[… earlier output truncated …]` |
 | Memory safety | Ring buffer evicts oldest lines/bytes; no unbounded string concat |
 | Clear logs | Manual "Clear logs" button clears buffers for terminal states; restart clears by default |
-| No DB writes (MVP) | Logs live only in server memory; lost on ManDev restart |
+| Live logs in memory | Full stdout/stderr buffers live in server memory; lost on ManDev restart. DB stores previews only (Phase 3C). |
 
 Phase 2A `truncateRunProfileOutputPreview` remains for **short** execution results; process manager uses the dedicated buffer type.
 
@@ -426,28 +475,28 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 
 ## 15. Recommended MVP scope
 
-### Phase 3A (implement first)
+### Phase 3A (complete)
 
 - [x] In-memory registry keyed by `runProfileId` (`run-profile-process-manager.ts`)
 - [x] Bounded in-memory logs (stdout/stderr) (`run-profile-log-buffer.ts`)
 - [x] Service wrappers with DB validation + env gating (`src/services/run-profiles.ts`)
 - [x] Server Actions for start/stop/restart/snapshot/list (`actions.ts`)
 - [x] Unit tests for buffer, manager, service, and actions (mocked spawn / Prisma / fs)
-- [ ] Start long-running command via UI (service path bypasses Phase 2A long-running block)
-- [ ] Poll status + logs via Server Actions (1–2s interval in UI)
-- [ ] Status badge + Run/Stop/Restart + logs panel on Run Profiles card
+- [x] Start long-running command via UI (service path bypasses Phase 2A long-running block)
+- [x] Poll status + logs via Server Actions (1–2s interval in UI)
+- [x] Status badge + Run/Stop/Restart + logs panel on Run Profiles card
 
-### Phase 3B (later)
+### Phase 3B (complete — deferred items noted in checkpoint)
 
-- [ ] SSE log streaming Route Handler
+- [ ] SSE log streaming Route Handler *(Phase 4 candidate)*
 - [x] Persisted run history foundation (`ProjectRunProfileRun` model; create on managed start, finalize on stop/exit/fail)
 - [x] Recent run history UI on Run Profiles card (latest 3 per profile; refresh to see new runs)
 - [x] Unix process groups / improved tree kill (Phase 3B safe stop — `detached` spawn + `kill(-pid)` on POSIX, Windows unchanged)
-- [ ] Orphan detection (pidfile or startup scan)
+- [ ] Orphan detection (pidfile or startup scan) *(Phase 4 candidate)*
 - [x] App/server restart stale-state notice (`processManagerBootSessionId` + managed UI banner)
 - [x] Stale run-history recovery on boot (`markActiveRunProfileRunsStaleOnBoot`; marks orphaned `starting` / `running` / `stopping` rows as `stale`)
-- [ ] Bind-address exposure warning automation
-- [ ] Clear separation UI: "Run once" (30s) vs "Start server" (managed)
+- [ ] Bind-address exposure warning automation *(Phase 4 candidate)*
+- [ ] Clear separation UI: "Run once" (30s) vs "Start server" (managed) *(Phase 4 candidate)*
 
 ### Phase 3C foundation (implemented)
 
@@ -476,20 +525,22 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 
 ## 16. Acceptance criteria
 
-### Phase 3A checklist
+### Phase 3 checklist (complete)
 
-- [ ] With `MANDEV_ENABLE_COMMAND_EXECUTION=true`, user can start a saved profile whose command matches long-running patterns (e.g. `pnpm dev`) without Phase 2A block message
-- [ ] With flag off, start/stop/restart return disabled state; no spawn
-- [ ] Confirmation dialog required before managed start
-- [ ] Status badge reflects lifecycle within 2s of state change (via polling)
-- [ ] Logs update while running (poll); stdout and stderr visible separately
-- [ ] Stop terminates process within grace period + kill fallback
-- [ ] Restart stops then starts; logs cleared on restart (default)
-- [ ] Log buffers do not grow unbounded (verified by test with large output)
-- [ ] Duplicate start while running returns error or existing run (documented behavior)
-- [ ] Short-command `executeRunProfileAction` still works with 30s timeout and long-running block
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` pass
-- [ ] Manual QA: start → view logs → stop → restart → exit naturally
+- [x] With `MANDEV_ENABLE_COMMAND_EXECUTION=true`, user can start a saved profile whose command matches long-running patterns (e.g. `pnpm dev`) without Phase 2A block message
+- [x] With flag off, start/stop/restart return disabled state; no spawn
+- [x] Confirmation dialog required before managed start
+- [x] Status badge reflects lifecycle within 2s of state change (via polling)
+- [x] Logs update while running (poll); stdout and stderr visible separately
+- [x] Stop terminates process within grace period + kill fallback (POSIX process group on macOS/Linux)
+- [x] Restart stops then starts; logs cleared on restart (default)
+- [x] Log buffers do not grow unbounded (verified by test with large output)
+- [x] Duplicate start while running returns error or existing run (documented behavior)
+- [x] Short-command `executeRunProfileAction` still works with 30s timeout and long-running block
+- [x] Persisted run history and Recent Runs UI (Phase 3C)
+- [x] Stale active run recovery on app restart (Phase 3D)
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` pass
+- [x] Manual QA: start → view logs → stop → restart → exit naturally; stale notice and run-history recovery verified
 
 ---
 
@@ -525,4 +576,4 @@ Follow **Test-First Enforcement** for implementation PRs: buffer tests → manag
 
 ## Document maintenance
 
-When Phase 3A is implemented, update this doc with "Implemented" sections, add paths to `path-map.md`, and extend `dashboard-hub.md` or a dedicated `run-profiles.md` with user-visible behavior summary.
+Phase 3 is complete. Future work belongs in Phase 4 planning (SSE, orphan detection, full run detail, persisted logs). Update `path-map.md` and feature index when new run-profile capabilities ship.
