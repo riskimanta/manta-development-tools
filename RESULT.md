@@ -1,37 +1,34 @@
-# ManDev — Run Profiles Phase 3C foundation (persistent run history)
+# ManDev — Run Profiles Phase 3C UI (recent run history)
 
 ## What changed
 
-**`prisma/schema.prisma`** — Added `ProjectRunProfileRun` model with indexes on `runProfileId`, `startedAt`, and `(runProfileId, startedAt)`.
+**`src/services/run-profiles.ts`** — Added `listRunProfilesWithRecentRunsByProjectId` to load each profile with up to 3 serializable `RunProfileRunRecord` entries.
 
-**`prisma/migrations/20260606183000_add_project_run_profile_runs/`** — SQLite migration for run history table.
+**`src/app/(app)/projects/[id]/page.tsx`** — Project Detail now uses the new loader for Run Profiles card data.
 
-**`src/lib/run-profile-run-history-types.ts`** — Serializable `RunProfileRunRecord` DTO.
+**`src/components/projects/project-run-profiles-card.tsx`** — Extended profile shape with optional `recentRuns`; renders a compact history section per profile row.
 
-**`src/services/run-profile-run-history.ts`** — DB helpers: create on managed start, update on spawn, finalize on terminal lifecycle, list/get latest runs. DB failures are logged, not thrown.
+**`src/components/projects/run-profile-recent-runs.tsx`** — Presentational “Recent runs” list (status, PID, times, duration, exit/signal, stdout/stderr previews) with empty state.
 
-**`src/lib/run-profile-process-manager.ts`** — Typed lifecycle callbacks (`spawn`, `error`, `close`) via `setLifecycleHandler`; restart force-stop emits `close` before listeners are removed.
+**`src/lib/run-profile-run-history-ui.ts`** — Formatting helpers for run history display (duration, timestamps, exit summary, status labels).
 
-**`src/services/run-profiles.ts`** — Registers lifecycle handler; creates run history on accepted managed start/restart; re-exports `listRunProfileRuns` / `getLatestRunProfileRun`.
+**Tests** — `run-profile-run-history-ui.test.ts`; `listRunProfilesWithRecentRunsByProjectId` cases in `run-profiles.test.ts`.
 
-**Tests** — `run-profile-run-history.test.ts`, lifecycle handler test, integration expectations in `run-profiles.test.ts`.
-
-**`docs/features/run-profiles-phase-3.md`** — Phase 3C foundation note.
+**`docs/features/run-profiles-phase-3.md`** — Phase 3C UI section and checklist updates.
 
 ## Schema / migration
 
-New table `ProjectRunProfileRun` (cascade delete with profile). Run `pnpm db:migrate` (or apply migration `20260606183000_add_project_run_profile_runs`).
+None. Uses existing `ProjectRunProfileRun` table.
 
 ## Known limitations
 
+- History is loaded on page render; refresh/reload required to see newly completed runs (no SSE/live updates).
 - Live managed process state remains in-memory only.
-- No run-history UI in this step.
-- Server restart mid-run may leave an open `running` history row (orphan metadata).
-- Phase 2A short command execution unchanged.
+- Orphaned `running` history rows may persist after server restart mid-run.
+- Phase 2A short command execution unchanged; history reflects managed runs only.
 
 ## Test / lint / typecheck status
 
-- `pnpm db:generate` + `prisma migrate deploy`: applied `20260606183000_add_project_run_profile_runs`
-- `pnpm test`: Pass (366 tests)
+- `pnpm test`: Pass (380 tests)
 - `pnpm typecheck`: Pass
 - `pnpm lint`: Pass

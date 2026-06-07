@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteRunProfileButton } from "@/components/projects/delete-run-profile-button";
 import { ManagedRunProfileControls } from "@/components/projects/managed-run-profile-controls";
 import { RunProfileExecutionResultPanel } from "@/components/projects/run-profile-execution-result-panel";
+import { RunProfileRecentRuns } from "@/components/projects/run-profile-recent-runs";
 import { RunRunProfileButton } from "@/components/projects/run-run-profile-button";
 import { ProjectRunProfilesImport } from "@/components/projects/project-run-profiles-import";
 import {
@@ -30,6 +31,7 @@ import {
   type RunProfileFormValues,
 } from "@/components/projects/project-run-profile-form";
 import { COMMAND_EXECUTION_DISABLED_MESSAGE } from "@/lib/mandev-command-execution";
+import type { RunProfileRunRecord } from "@/lib/run-profile-run-history-types";
 import type { RunProfileExecutionResult } from "@/lib/run-profile-execution";
 import {
   buildRunProfileCdCommandCopy,
@@ -46,6 +48,7 @@ export type RunProfileListItem = {
   workingDirectory: string | null;
   description: string | null;
   isDefault: boolean;
+  recentRuns?: RunProfileRunRecord[];
 };
 
 type Props = {
@@ -226,6 +229,11 @@ function RunProfileRow({
           workingDirectory={profile.workingDirectory}
         />
       ) : null}
+
+      <RunProfileRecentRuns
+        recentRuns={profile.recentRuns ?? []}
+        className="rounded-md border border-dashed border-border/70 bg-muted/10 p-2.5"
+      />
     </li>
   );
 }

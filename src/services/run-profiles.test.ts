@@ -14,6 +14,7 @@ import {
   getManagedRunProfileSnapshot,
   importProjectRunProfilesFromLocalFile,
   listManagedRunProfileSnapshots,
+  listRunProfilesWithRecentRunsByProjectId,
   previewProjectRunProfilesImportFromLocalFile,
   resolveRunProfileWorkingDirectory,
   restartManagedRunProfile,
@@ -21,7 +22,10 @@ import {
   stopManagedRunProfile,
   updateRunProfileRecord,
 } from "@/services/run-profiles";
-import { createRunProfileRunForManagedStart } from "@/services/run-profile-run-history";
+import {
+  createRunProfileRunForManagedStart,
+  listRunProfileRuns,
+} from "@/services/run-profile-run-history";
 
 vi.mock("@/lib/mandev-command-execution", () => ({
   isCommandExecutionEnabled: vi.fn(),
@@ -809,5 +813,62 @@ describe("listManagedRunProfileSnapshots", () => {
       message: "Found 1 managed process(es).",
       processManagerBootSessionId: "test-boot-session-id",
     });
+  });
+});
+
+describe("listRunProfilesWithRecentRunsByProjectId", () => {
+  const recentRun = {
+    id: "run-1",
+    runProfileId: "rp-1",
+    status: "exited",
+    command: "pnpm dev",
+    workingDirectory: "/Users/dev/app",
+    pid: 4242,
+    startedAt: "2026-01-01T00:00:00.000Z",
+    endedAt: "2026-01-01T00:01:00.000Z",
+    exitCode: 0,
+    signal: null,
+    durationMs: 60_000,
+    stdoutPreview: "ready",
+    stderrPreview: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:01:00.000Z",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("loads recent runs for each profile with a serializable shape", async () => {
+    vi.mocked(db.projectRunProfile.findMany).mockResolvedValue([mockProfile]);
+    vi.mocked(listRunProfileRuns).mockResolvedValue([recentRun]);
+
+    const result = await listRunProfilesWithRecentRunsByProjectId("proj-1");
+
+    expect(db.projectRunProfile.findMany).toHaveBeenCalledWith({
+      where: { projectId: "proj-1" },
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    });
+    expect(listRunProfileRuns).toHaveBeenCalledWith("rp-1", 3);
+    expect(result).toEqual([
+      {
+        id: "rp-1",
+        name: "Dev",
+        command: "pnpm dev",
+        workingDirectory: "/Users/dev/app",
+        description: null,
+        isDefault: true,
+        recentRuns: [recentRun],
+      },
+    ]);
+  });
+
+  it("returns empty recentRuns arrays when no history exists", async () => {
+    vi.mocked(db.projectRunProfile.findMany).mockResolvedValue([mockProfile]);
+    vi.mocked(listRunProfileRuns).mockResolvedValue([]);
+
+    const result = await listRunProfilesWithRecentRunsByProjectId("proj-1");
+
+    expect(result[0]?.recentRuns).toEqual([]);
   });
 });
