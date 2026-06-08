@@ -11,6 +11,7 @@ Manual Git snapshot capture on Project Detail. Click **Capture progress** to ins
 - `f449004` — docs: update work progress snapshot result
 - `103e403` — docs: finalize work progress snapshot report
 - `45da5b2` — docs: verify work progress snapshot manually
+- `fe2d9b4` — docs: finalize manual verification report
 
 ## Changed files
 
@@ -59,7 +60,7 @@ Manual Git snapshot capture on Project Detail. Click **Capture progress** to ins
 - Status: OPEN
 
 ## Git status
-On branch `feat/work-progress-snapshot`, up to date with `origin/feat/work-progress-snapshot` (latest: `45da5b2`). Working tree clean.
+On branch `feat/work-progress-snapshot`, up to date with `origin/feat/work-progress-snapshot`. Working tree clean.
 
 ## Known limitations
 - Manual capture only; no background agent, file watcher, or Notion/AI integration
