@@ -67,9 +67,15 @@ On branch `feat/work-progress-snapshot`, up to date with `origin/feat/work-progr
 - Optional `note` field supported in action but not exposed in MVP UI
 
 ## Manual verification checklist
-- Not performed yet
-- Recommended manual check:
-  1. Open ManDev Project Detail for the ManDev project itself
-  2. Ensure `localPath` points to the ManDev repo
-  3. Click **Capture progress**
-  4. Confirm a new snapshot appears with branch, latest commit, and changed files count
+- Pass
+- Verified by dogfooding ManDev project itself
+- Opened ManDev Project Detail
+- Confirmed `localPath` points to the ManDev repository:
+  `/Users/riskimanta/Documents/manta-development-tools`
+- Clicked **Capture progress**
+- New snapshot appeared in Recent snapshots
+- Snapshot displayed:
+  - branch: `FEAT/WORK-PROGRESS-SNAPSHOT`
+  - commit: `103e403`
+  - message: `docs: finalize work progress snapshot report (clean working tree)`
+  - status: `Clean working tree`
