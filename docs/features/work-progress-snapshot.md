@@ -1,7 +1,7 @@
-# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E)
+# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail)  
-**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, and session detail page
+**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt)  
+**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, and copyable AI summary prompt
 
 ## Overview
 
@@ -69,6 +69,15 @@ Behavior:
 3. The detail page shows session summary, aggregated changed files, and a snapshot timeline.
 4. Sessions remain derived from snapshots; detail links may change if future snapshots extend or regroup a session.
 
+### AI summary prompt (Phase 5F)
+
+1. Open a session detail page at `/projects/[id]/work-progress/sessions/[sessionId]`.
+2. Click **Copy AI summary prompt** near the session summary card.
+3. ManDev builds a structured Markdown prompt from project and session data and copies it to the clipboard.
+4. Paste the prompt into Cursor, Claude, ChatGPT, or another AI assistant to generate a summary manually.
+
+ManDev does **not** call any AI API. Summary generation remains manual by pasting the copied prompt into your AI tool of choice.
+
 ## Git capture
 
 | Data | Git command |
@@ -96,6 +105,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/lib/work-progress-dedupe.ts` | Duplicate snapshot comparison |
 | `src/lib/work-progress-session.ts` | Derived session grouping |
 | `src/lib/work-progress-session-ui.ts` | Session duration/timestamp formatting |
+| `src/lib/work-progress-ai-summary-prompt.ts` | Structured AI summary prompt builder |
 | `src/services/work-progress.ts` | Persist/list snapshots, cwd capture, sessions |
 | `src/app/(app)/projects/[id]/work-progress/page.tsx` | Work Progress sessions page |
 | `src/app/(app)/projects/[id]/work-progress/sessions/[sessionId]/page.tsx` | Session detail page |
@@ -107,6 +117,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/components/projects/work-progress-terminal-hint.tsx` | Terminal usage hint |
 | `src/components/projects/work-progress-session-list.tsx` | Session cards on sessions page |
 | `src/components/projects/work-progress-session-detail.tsx` | Session detail summary and timeline |
+| `src/components/projects/work-progress-ai-summary-prompt-actions.tsx` | Copy AI summary prompt button |
 
 ## Agent API
 
@@ -121,7 +132,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 ## Not included
 
 - Background agent daemon, Cursor extension, file watcher
-- Notion integration, SSE/WebSocket, AI summary
+- Notion integration, SSE/WebSocket, automatic AI summary API
 - Auto-run tests
 - Remote cloud sync
 
@@ -135,4 +146,4 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 - Watch mode is polling-based only; no native filesystem watcher or background daemon
 - Sessions are derived from snapshots; no dedicated `WorkSession` table yet
 - Derived session detail links may change if future snapshots extend or regroup a session
-- No AI-generated session summary yet
+- No automatic AI-generated session summary; users copy a prompt and paste it into Cursor, Claude, or ChatGPT manually

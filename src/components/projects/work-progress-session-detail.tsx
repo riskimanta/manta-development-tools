@@ -1,3 +1,4 @@
+import { WorkProgressAiSummaryPromptActions } from "@/components/projects/work-progress-ai-summary-prompt-actions";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -96,10 +97,14 @@ function SnapshotTimelineEntry({ snapshot }: { snapshot: WorkProgressRecord }) {
 }
 
 type Props = {
+  project: {
+    name: string;
+    localPath: string | null;
+  };
   session: WorkProgressSession;
 };
 
-export function WorkProgressSessionDetail({ session }: Props) {
+export function WorkProgressSessionDetail({ project, session }: Props) {
   const timelineSnapshots = [...session.snapshots].sort(
     (left, right) =>
       new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -123,6 +128,7 @@ export function WorkProgressSessionDetail({ session }: Props) {
             {formatSessionDurationMs(session.durationMs)} · {session.snapshotCount}{" "}
             snapshot{session.snapshotCount === 1 ? "" : "s"}
           </CardDescription>
+          <WorkProgressAiSummaryPromptActions project={project} session={session} />
         </CardHeader>
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
           <p>
