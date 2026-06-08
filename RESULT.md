@@ -1,30 +1,24 @@
-# Phase 5B — Local Work Progress Agent / CLI
+# Phase 5B — Local Work Progress Agent / CLI: MERGED
 
 ## Summary
-Added CLI-triggered Work Progress capture through `mandev track`.
+Phase 5B added CLI-triggered Work Progress capture through `mandev track`. A user can run the local CLI from a registered project folder, and ManDev captures Git work progress through a protected local API route.
 
-## Branch
-`feat/work-progress-local-agent`
-
-## Commit
-`a5e9a28` — feat: add local work progress agent
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/14
+- Status: MERGED
+- Merge commit: `4d05c91`
+- Feature branch: `feat/work-progress-local-agent`
+- Latest feature branch commit before merge: `0085172`
 
 ## Delivered
-- Local API route for agent-triggered capture
-- Agent token protection with `MANDEV_AGENT_TOKEN`
-- CLI script `bin/mandev.mjs`
-- `mandev track` command
-- cwd-to-project matching by registered `localPath`
-- Work Progress card terminal usage hint
-- Tests
-- Docs
-
-## Validation
-| Check | Result |
-|-------|--------|
-| `pnpm test` | Pass — 449 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
+- Added local API route for agent-triggered Work Progress capture
+- Added `MANDEV_AGENT_TOKEN` protection
+- Added CLI script `bin/mandev.mjs`
+- Added `mandev track` command
+- Added cwd-to-project matching by registered `localPath`
+- Added Work Progress card terminal usage hint
+- Added tests
+- Added docs
 
 ## Manual verification
 - Pass
@@ -44,14 +38,20 @@ Added CLI-triggered Work Progress capture through `mandev track`.
   - snapshot: `2026-06-08T04:14:54.623Z`
 - Opened ManDev Project Detail
 - Confirmed a new Work Progress snapshot appeared in Recent snapshots
-- Snapshot displayed branch, latest commit, changed files count/status (`Clean working tree`), and created timestamp (`just now`)
+- Snapshot displayed branch, latest commit, changed files count/status `Clean working tree`, and created timestamp `just now`
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/14
-- Status: OPEN
+## Validation on main
+| Check | Result |
+|-------|--------|
+| `pnpm test` | Pass — 449 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
-## Git status
-On branch `feat/work-progress-local-agent`, up to date with `origin/feat/work-progress-local-agent`. Working tree clean.
+## Cleanup
+- Local `main` synced with `origin/main`
+- Feature branch deleted locally: yes (already removed during merge)
+- Remote feature branch deleted/pruned: yes
+- Working tree clean: yes
 
 ## Known limitations
 - Manual CLI trigger only
@@ -62,3 +62,6 @@ On branch `feat/work-progress-local-agent`, up to date with `origin/feat/work-pr
 - Requires ManDev app running locally
 - Requires `MANDEV_AGENT_TOKEN`
 - Requires registered project `localPath`
+
+## Final git status
+On branch `main`, up to date with `origin/main`. Working tree clean.
