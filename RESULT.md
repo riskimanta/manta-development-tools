@@ -28,13 +28,24 @@ Added saved AI summary previews to the Work Progress Sessions page so users can 
 | `pnpm lint` | Pass |
 
 ## Manual verification
-- Not performed yet
-- Recommended steps:
-  1. Restart `pnpm dev` after pulling this branch
-  2. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks` and confirm a saved summary exists
-  3. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress` and confirm the matching session card shows **AI Summary**, preview text, updated timestamp, and **View details**
-  4. Confirm sessions without a saved summary show **No saved AI summary yet.**
-  5. Open `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` and confirm the empty state still works
+- Pass
+- Verified through ManDev UI
+- Ran `pnpm db:generate`
+- Ran `pnpm db:migrate`
+- Restarted ManDev with `pnpm dev`
+- Opened session detail page:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
+- Confirmed saved summary still exists on the detail page
+- Opened sessions list:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
+- Confirmed matching session card shows:
+  - **AI Summary** label
+  - summary preview text
+  - updated timestamp
+  - **View details** link
+- Confirmed **View details** opens the correct session detail page
+- Confirmed sessions without saved summary show **No saved AI summary yet.**
+- Empty project check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` still shows safe empty state
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/20
