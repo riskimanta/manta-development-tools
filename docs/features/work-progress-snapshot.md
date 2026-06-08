@@ -1,7 +1,7 @@
-# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D)
+# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view)  
-**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, and derived session view
+**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail)  
+**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, and session detail page
 
 ## Overview
 
@@ -62,6 +62,13 @@ Behavior:
 3. A new session starts when branch changes or the gap between snapshots exceeds 90 minutes.
 4. Each session card shows branch, duration, snapshot count, latest commit, changed files, and clean/dirty status.
 
+### Session detail (Phase 5E)
+
+1. From `/projects/[id]/work-progress`, click **View details** on a session card.
+2. Open `/projects/[id]/work-progress/sessions/[sessionId]`.
+3. The detail page shows session summary, aggregated changed files, and a snapshot timeline.
+4. Sessions remain derived from snapshots; detail links may change if future snapshots extend or regroup a session.
+
 ## Git capture
 
 | Data | Git command |
@@ -91,6 +98,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/lib/work-progress-session-ui.ts` | Session duration/timestamp formatting |
 | `src/services/work-progress.ts` | Persist/list snapshots, cwd capture, sessions |
 | `src/app/(app)/projects/[id]/work-progress/page.tsx` | Work Progress sessions page |
+| `src/app/(app)/projects/[id]/work-progress/sessions/[sessionId]/page.tsx` | Session detail page |
 | `src/app/projects/work-progress/actions.ts` | `captureWorkProgressAction` |
 | `src/app/api/work-progress/capture/route.ts` | Agent API for CLI capture |
 | `bin/mandev.mjs` | `mandev track` CLI |
@@ -98,6 +106,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/components/projects/capture-work-progress-button.tsx` | Capture button + toasts |
 | `src/components/projects/work-progress-terminal-hint.tsx` | Terminal usage hint |
 | `src/components/projects/work-progress-session-list.tsx` | Session cards on sessions page |
+| `src/components/projects/work-progress-session-detail.tsx` | Session detail summary and timeline |
 
 ## Agent API
 
@@ -125,3 +134,5 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 - CLI requires ManDev app running locally and `MANDEV_AGENT_TOKEN` configured
 - Watch mode is polling-based only; no native filesystem watcher or background daemon
 - Sessions are derived from snapshots; no dedicated `WorkSession` table yet
+- Derived session detail links may change if future snapshots extend or regroup a session
+- No AI-generated session summary yet
