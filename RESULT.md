@@ -29,20 +29,28 @@ Added manual saving/editing of AI-generated summaries on the Work Progress Sessi
 | `pnpm db:migrate` | Pass — `20260608120049_add_work_progress_session_summary` applied |
 
 ## Manual verification
-- Not performed yet
-- Recommended steps:
-  1. Run `pnpm db:migrate` and `pnpm dev`
-  2. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
-  3. Confirm **Copy AI summary prompt** and new **AI Summary** section appear
-  4. Paste sample summary text, click **Save summary**, refresh, edit, and resave
-  5. Open an invalid session URL and confirm safe not-found behavior
+- Pass
+- Verified through ManDev UI
+- Ran `pnpm db:migrate`
+- Started ManDev with `pnpm dev`
+- Opened session detail page:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
+- Confirmed existing **Copy AI summary prompt** button still appears
+- Confirmed new **AI Summary** section appears
+- Pasted sample AI summary text into the textarea
+- Clicked **Save summary**
+- Confirmed saved summary appears on the page
+- Refreshed page and confirmed saved summary persists
+- Edited the summary and saved again
+- Refreshed again and confirmed updated summary persists
+- Invalid session URL check: Pass — `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id` keeps safe not-found behavior
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/19
 - Status: OPEN
 
 ## Git status
-Clean working tree on `feat/work-progress-session-summary` after commit `d4016b5`.
+Clean working tree on `feat/work-progress-session-summary` before `RESULT.md` verification commit.
 
 ## Known limitations
 - No AI API integration
