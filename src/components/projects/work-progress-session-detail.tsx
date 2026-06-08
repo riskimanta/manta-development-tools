@@ -10,8 +10,11 @@ import {
 } from "@/components/ui/card";
 import {
   formatSessionDurationMs,
+  formatWorkProgressCleanDirtyLabel,
   formatWorkProgressSessionTitle,
   formatWorkProgressTimestamp,
+  WORK_PROGRESS_CLEAN_WORKING_TREE_LABEL,
+  WORK_PROGRESS_DERIVED_SESSION_NOTICE,
 } from "@/lib/work-progress-session-ui";
 import {
   isWorkProgressSnapshotClean,
@@ -62,7 +65,9 @@ function SnapshotTimelineEntry({ snapshot }: { snapshot: WorkProgressRecord }) {
       </div>
 
       {snapshot.changedFilesCount === 0 ? (
-        <p className="text-[11px] text-muted-foreground">Clean working tree.</p>
+        <p className="text-[11px] text-muted-foreground">
+          {WORK_PROGRESS_CLEAN_WORKING_TREE_LABEL}
+        </p>
       ) : (
         <div className="space-y-1">
           <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/90">
@@ -132,6 +137,9 @@ export function WorkProgressSessionDetail({ project, session, summary }: Props) 
             {formatSessionDurationMs(session.durationMs)} · {session.snapshotCount}{" "}
             snapshot{session.snapshotCount === 1 ? "" : "s"}
           </CardDescription>
+          <p className="text-xs text-muted-foreground">
+            {WORK_PROGRESS_DERIVED_SESSION_NOTICE}
+          </p>
         </CardHeader>
       </Card>
 
@@ -180,7 +188,7 @@ export function WorkProgressSessionDetail({ project, session, summary }: Props) 
         {session.changedFilesCount === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              Clean working tree across this session.
+              {formatWorkProgressCleanDirtyLabel(true)} across this session.
             </CardContent>
           </Card>
         ) : (

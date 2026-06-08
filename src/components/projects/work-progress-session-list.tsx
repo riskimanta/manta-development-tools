@@ -12,6 +12,7 @@ import {
 import {
   formatSessionDurationMs,
   formatWorkProgressTimestamp,
+  WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_HINT,
   WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL,
   WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL,
 } from "@/lib/work-progress-session-ui";
@@ -78,9 +79,10 @@ function SessionSavedSummaryPreview({
   }
 
   return (
-    <p className="text-xs text-muted-foreground">
-      {WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL}
-    </p>
+    <div className="space-y-0.5 text-xs text-muted-foreground">
+      <p>{WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL}</p>
+      <p>{WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_HINT}</p>
+    </div>
   );
 }
 

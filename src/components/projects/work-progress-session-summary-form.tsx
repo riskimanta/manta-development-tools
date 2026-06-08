@@ -7,7 +7,10 @@ import { saveWorkProgressSessionSummaryAction } from "@/app/projects/work-progre
 import { Button } from "@/components/ui/button";
 import { formatRelativeTime } from "@/lib/format";
 import type { WorkProgressSessionSummaryActionState } from "@/lib/work-progress-session-summary-action-types";
-import { formatWorkProgressTimestamp } from "@/lib/work-progress-session-ui";
+import {
+  WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL,
+  formatWorkProgressTimestamp,
+} from "@/lib/work-progress-session-ui";
 import type { WorkProgressSessionSummaryRecord } from "@/services/work-progress-session-summaries";
 
 type Props = {
@@ -63,7 +66,9 @@ export function WorkProgressSessionSummaryForm({
           </p>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No saved AI summary yet.</p>
+        <p className="text-sm text-muted-foreground">
+          {WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL}
+        </p>
       )}
 
       <form action={formAction} className="space-y-3">

@@ -1,13 +1,48 @@
-# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G + 5H + 5I + 5J)
+# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G + 5H + 5I + 5J + 5K)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary + Phase 5H sessions list summary preview + Phase 5I Project Detail dashboard summary + Phase 5J sessions list search/filter)  
-**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, manual saved AI summaries, saved summary previews on the sessions list, a compact Work Progress dashboard summary on Project Detail, and server-rendered search/filter on the Work Progress sessions page
+**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary + Phase 5H sessions list summary preview + Phase 5I Project Detail dashboard summary + Phase 5J sessions list search/filter + Phase 5K stabilization and UX polish)  
+**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, manual saved AI summaries, saved summary previews on the sessions list, a compact Work Progress dashboard summary on Project Detail, server-rendered search/filter on the Work Progress sessions page, and UX polish for guidance, empty states, and derived-session messaging
 
 ## Overview
 
 Projects with a configured `localPath` can capture a **Work Progress** snapshot from the local Git repository. Each snapshot records branch, latest commit metadata, working tree status, and changed files.
 
 Supports dogfooding: register ManDev as a project whose `localPath` points at this repository.
+
+## End-to-end usage flow
+
+```
+Capture / CLI / Watch
+→ Project dashboard summary
+→ Sessions list
+→ Search & filter
+→ Session detail
+→ Copy AI prompt
+→ Save AI summary
+→ Summary preview
+```
+
+1. **Capture** from Project Detail, **`mandev track`**, or **`mandev track --watch`** while developing.
+2. Review the **Project Detail** Work Progress dashboard summary.
+3. Open **View all work progress** for the derived **sessions list**.
+4. **Search and filter** sessions when the list grows.
+5. Open **session detail**, **copy the AI summary prompt**, generate a summary externally, and **save** it back to ManDev.
+6. See the **summary preview** on the sessions list and Project Detail dashboard.
+
+## Operational notes
+
+After Prisma schema or migration changes:
+
+```bash
+pnpm db:generate
+pnpm db:migrate
+```
+
+Restart the dev server:
+
+```bash
+pnpm dev
+```
 
 ## User flow
 
@@ -120,6 +155,16 @@ Search matches branch, commit hash/message, changed file paths, saved summary te
 
 No new database migration. No AI API is called. Filtering applies to derived sessions in memory after grouping snapshots.
 
+### Stabilization and UX polish (Phase 5K)
+
+1. Project Detail and the sessions page show a compact **How to use Work Progress** guide.
+2. Terminal hints include separate copy buttons for `mandev track` and `mandev track --watch`.
+3. Empty states use consistent copy for missing snapshots, missing summaries, filter no-match, and clean working trees.
+4. Session detail and the sessions page show subtle derived-session messaging: links may change if future snapshots regroup sessions.
+5. Navigation links remain: Project Detail → **View all work progress**; sessions page → **Back to project**; session detail → **Back to work progress** / **Back to project**.
+
+No new database migration. No AI API is called.
+
 ## Git capture
 
 | Data | Git command |
@@ -164,7 +209,8 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `bin/mandev.mjs` | `mandev track` CLI |
 | `src/components/projects/project-work-progress-card.tsx` | Project Detail card with dashboard summary |
 | `src/components/projects/capture-work-progress-button.tsx` | Capture button + toasts |
-| `src/components/projects/work-progress-terminal-hint.tsx` | Terminal usage hint |
+| `src/components/projects/work-progress-usage-guide.tsx` | Compact How to use Work Progress guide |
+| `src/components/projects/work-progress-terminal-hint.tsx` | Terminal usage hint with per-command copy buttons |
 | `src/components/projects/work-progress-session-list.tsx` | Session cards with saved summary preview on sessions page |
 | `src/components/projects/work-progress-session-filters.tsx` | Server-rendered GET filter form on sessions page |
 | `src/components/projects/work-progress-session-detail.tsx` | Session detail summary and timeline |
