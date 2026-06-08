@@ -1,70 +1,61 @@
-# Phase 5I — Work Progress Dashboard Summary: MERGED
+# Phase 5J — Work Progress Search & Filter
 
 ## Summary
-Phase 5I added a compact Work Progress dashboard summary to Project Detail so users can quickly see latest activity, snapshot/session counts, latest session, and latest saved AI summary preview.
+Added server-rendered search and filter controls to the Work Progress Sessions page so users can quickly find derived sessions by text, branch, status, and saved summary state.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/21
-- Status: MERGED
-- Merge commit: `6a668f9`
-- Feature branch: `feat/work-progress-dashboard-summary`
-- Latest feature branch commit before merge: `8c724e2`
+## Branch
+`feat/work-progress-search-filter`
+
+## Commit
+`4b0f065` — `feat: add work progress search filters`
 
 ## Delivered
-- Added Work Progress dashboard summary data loading
-- Added snapshot/session/summary counts
-- Added latest activity metadata
-- Added latest session summary on Project Detail
-- Added latest saved AI summary preview on Project Detail
-- Preserved existing Capture progress, terminal usage hint, Recent snapshots, and View sessions link
+- Added Work Progress session filter/query parsing helpers
+- Added search across branch, commit, changed files, and saved summaries
+- Added branch filter
+- Added clean/dirty status filter
+- Added has-summary/no-summary filter
+- Added optional startedAt date range filter (UTC day range)
+- Added filter form on Work Progress sessions page
+- Added result count and no-match state
+- Preserved existing session cards and View details links
 - Added tests
 - Updated docs
 
-## Manual verification
-- Pass
-- Verified through ManDev UI
-- Started ManDev with `pnpm dev`
-- Opened Project Detail:
-  `/projects/cmpuxei2q0000ul28ztek2rot`
-- Confirmed Work Progress card shows:
-  - Summary section
-  - last activity
-  - snapshot count
-  - session count
-  - sessions with summaries count
-  - latest session summary
-  - latest saved AI summary preview
-  - Capture progress button
-  - terminal usage hint
-  - Recent snapshots
-  - View all work progress link
-- Empty project check passed:
-  `/projects/cmoonw6y80000ulrxz1nevs1p`
-  shows `No work progress captured yet.`
-
-## Validation on main
+## Validation
 | Check | Result |
 |-------|--------|
 | `pnpm db:generate` | Pass |
 | `pnpm db:migrate` | Pass — migration already applied |
-| `pnpm test` | Pass — 541 tests |
+| `pnpm test` | Pass — 565 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Feature branch deleted locally: yes (already removed during merge)
-- Remote feature branch deleted/pruned: yes
-- Working tree clean: yes (before RESULT.md commit)
+## Manual verification
+- Not performed yet
+- Recommended steps:
+  1. `pnpm dev`
+  2. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
+  3. Confirm filter/search form appears above sessions
+  4. Test search by branch, commit text, changed file path, and saved summary text
+  5. Test branch, clean/dirty, and has/no summary filters
+  6. Confirm result count (`Showing X of Y sessions`)
+  7. Confirm no-match state and Clear filters reset
+  8. Confirm View details links still work
+  9. Open empty project `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` and confirm empty state
+
+## PR
+- URL: pending
+- Status: NOT CREATED
+
+## Git status
+On branch `feat/work-progress-search-filter` with implementation committed.
 
 ## Known limitations
-- Dashboard summary is derived from existing snapshots and saved summaries
+- Search/filter applies to derived sessions, not a full-text search index
+- No global Work Progress search yet
+- No saved filters yet
 - No AI API integration
-- No automatic AI-generated summary
-- Summary editing still happens on session detail page
 - Sessions are still derived from snapshots
 - Saved summaries are attached to derived session IDs
-- Derived session IDs may change if future snapshots extend/regroup the session
-
-## Final git status
-On branch `main`, up to date with `origin/main`. Working tree clean after merge report commit.
+- Date range uses session `startedAt` within selected UTC days
