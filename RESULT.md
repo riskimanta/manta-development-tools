@@ -55,7 +55,7 @@ Added a detail page for derived Work Progress sessions, showing session summary,
 - Status: OPEN
 
 ## Git status
-On branch `feat/work-progress-session-detail`, up to date with `origin/feat/work-progress-session-detail`. Feature commit `794072f`, docs commit `07abf90`.
+On branch `feat/work-progress-session-detail`, up to date with `origin/feat/work-progress-session-detail`. Latest commit `39013d2` (manual verification docs).
 
 ## Known limitations
 - Sessions are derived from snapshots, not persisted as a dedicated table
