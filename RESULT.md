@@ -8,7 +8,7 @@ Manual Git snapshot capture on Project Detail. Click **Capture progress** to ins
 
 ## Commits
 - `e844d24` — feat: add work progress snapshot capture
-- `<pending>` — docs: update work progress snapshot result
+- `f449004` — docs: update work progress snapshot result
 
 ## Changed files
 
@@ -53,11 +53,11 @@ Manual Git snapshot capture on Project Detail. Click **Capture progress** to ins
 | `pnpm db:migrate` | Applied `add_work_progress` |
 
 ## PR
-- URL: `<pending>`
-- Status: `<pending>`
+- URL: https://github.com/riskimanta/manta-development-tools/pull/13
+- Status: OPEN
 
 ## Git status
-`<pending>`
+On branch `feat/work-progress-snapshot`, up to date with `origin/feat/work-progress-snapshot`. Working tree clean.
 
 ## Known limitations
 - Manual capture only; no background agent, file watcher, or Notion/AI integration
