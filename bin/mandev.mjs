@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
+export const DEFAULT_WATCH_INTERVAL_SECONDS = 300;
+export const MIN_WATCH_INTERVAL_SECONDS = 30;
 
 function printHelp() {
   console.log(`ManDev local agent CLI
@@ -12,6 +14,10 @@ Usage:
   mandev track [options]
 
 Options:
+  --watch            Poll for work progress changes on an interval
+  --interval <sec>   Watch polling interval in seconds (default: ${DEFAULT_WATCH_INTERVAL_SECONDS})
+  --min-interval <sec>
+                     Minimum allowed watch interval (default: ${MIN_WATCH_INTERVAL_SECONDS})
   --base-url <url>   ManDev base URL (default: ${DEFAULT_BASE_URL})
   --token <token>    Agent token (fallback: MANDEV_AGENT_TOKEN)
   --cwd <path>       Working directory (default: current directory)
@@ -21,9 +27,43 @@ Options:
 
 Examples:
   mandev track
+  mandev track --watch
+  mandev track --watch --interval 60
   mandev track --note "Working on login redirect fix"
   MANDEV_AGENT_TOKEN=dev-token mandev track
 `);
+}
+
+export function parsePositiveInteger(value, label) {
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`${label} must be a positive integer.`);
+  }
+  return parsed;
+}
+
+export function resolveWatchIntervalSeconds(interval, minInterval) {
+  const resolvedMinInterval = parsePositiveInteger(
+    minInterval,
+    "Minimum interval",
+  );
+  if (resolvedMinInterval < MIN_WATCH_INTERVAL_SECONDS) {
+    throw new Error(
+      `Minimum interval must be at least ${MIN_WATCH_INTERVAL_SECONDS} seconds.`,
+    );
+  }
+
+  const resolvedInterval = parsePositiveInteger(interval, "Interval");
+  if (resolvedInterval < resolvedMinInterval) {
+    throw new Error(
+      `Interval must be at least ${resolvedMinInterval} seconds.`,
+    );
+  }
+
+  return {
+    intervalSeconds: resolvedInterval,
+    minIntervalSeconds: resolvedMinInterval,
+  };
 }
 
 export function parseMandevArgv(argv) {
@@ -36,6 +76,9 @@ export function parseMandevArgv(argv) {
     note: null,
     json: false,
     help: false,
+    watch: false,
+    interval: DEFAULT_WATCH_INTERVAL_SECONDS,
+    minInterval: MIN_WATCH_INTERVAL_SECONDS,
   };
 
   if (args.length === 0) {
@@ -61,6 +104,11 @@ export function parseMandevArgv(argv) {
       continue;
     }
 
+    if (current === "--watch") {
+      options.watch = true;
+      continue;
+    }
+
     if (current === "--base-url") {
       options.baseUrl = args.shift() ?? options.baseUrl;
       continue;
@@ -78,6 +126,16 @@ export function parseMandevArgv(argv) {
 
     if (current === "--note") {
       options.note = args.shift() ?? null;
+      continue;
+    }
+
+    if (current === "--interval") {
+      options.interval = args.shift() ?? options.interval;
+      continue;
+    }
+
+    if (current === "--min-interval") {
+      options.minInterval = args.shift() ?? options.minInterval;
       continue;
     }
 
@@ -103,11 +161,21 @@ function formatSuccess(payload) {
   ].join("\n");
 }
 
+function formatSkipped() {
+  return "No changes detected. Skipped snapshot.";
+}
+
 function formatFailure(error, code) {
   if (code) {
     return `${error} (${code})`;
   }
   return error;
+}
+
+function sleep(ms) {
+  return new Promise((resolveSleep) => {
+    setTimeout(resolveSleep, ms);
+  });
 }
 
 async function runTrack(options) {
@@ -120,6 +188,7 @@ async function runTrack(options) {
   const endpoint = new URL("/api/work-progress/capture", options.baseUrl);
   const body = {
     cwd: options.cwd,
+    dedupe: Boolean(options.dedupe),
   };
 
   if (options.note) {
@@ -163,6 +232,62 @@ async function runTrack(options) {
   return payload;
 }
 
+function printTrackResult(payload, json) {
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  if (payload.skipped) {
+    console.log(formatSkipped());
+    return;
+  }
+
+  console.log(formatSuccess(payload));
+}
+
+async function runWatch(options) {
+  const { intervalSeconds } = resolveWatchIntervalSeconds(
+    options.interval,
+    options.minInterval,
+  );
+
+  console.log(`Watching work progress for: ${options.cwd}`);
+  console.log(`ManDev base URL: ${options.baseUrl}`);
+  console.log(`Polling interval: ${intervalSeconds}s`);
+  console.log("Duplicate snapshots will be skipped when Git state is unchanged.");
+
+  let stopping = false;
+
+  const handleStop = () => {
+    if (stopping) {
+      return;
+    }
+    stopping = true;
+    console.log("\nStopped watch mode.");
+    process.exit(0);
+  };
+
+  process.on("SIGINT", handleStop);
+  process.on("SIGTERM", handleStop);
+
+  const trackOptions = {
+    ...options,
+    dedupe: true,
+  };
+
+  while (!stopping) {
+    const payload = await runTrack(trackOptions);
+    printTrackResult(payload, options.json);
+
+    if (stopping) {
+      break;
+    }
+
+    await sleep(intervalSeconds * 1000);
+  }
+}
+
 async function main(argv) {
   const options = parseMandevArgv(argv);
 
@@ -178,12 +303,13 @@ async function main(argv) {
   }
 
   try {
-    const payload = await runTrack(options);
-    if (options.json) {
-      console.log(JSON.stringify(payload, null, 2));
-    } else {
-      console.log(formatSuccess(payload));
+    if (options.watch) {
+      await runWatch(options);
+      return 0;
     }
+
+    const payload = await runTrack({ ...options, dedupe: false });
+    printTrackResult(payload, options.json);
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

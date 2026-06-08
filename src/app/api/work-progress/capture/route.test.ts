@@ -126,6 +126,8 @@ describe("POST /api/work-progress/capture", () => {
         createdAt: "2026-06-08T04:00:00.000Z",
         updatedAt: "2026-06-08T04:00:00.000Z",
       },
+      created: true,
+      skipped: false,
     });
 
     const response = await POST(
@@ -141,6 +143,75 @@ describe("POST /api/work-progress/capture", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       ok: true,
+      created: true,
+      skipped: false,
+      project: {
+        id: "proj-1",
+        name: "ManDev",
+        slug: "mandev",
+        localPath: "/Users/dev/mandev",
+      },
+      snapshot: {
+        id: "wp-1",
+        branch: "main",
+        latestCommitHash: "abc1234",
+        latestCommitMessage: "feat: add cli",
+        changedFilesCount: 0,
+        createdAt: "2026-06-08T04:00:00.000Z",
+      },
+    });
+    expect(captureWorkProgressForCwd).toHaveBeenCalledWith({
+      cwd: "/Users/dev/mandev",
+      note: "CLI capture",
+      dedupe: false,
+    });
+  });
+
+  it("returns skipped unchanged response when dedupe is true", async () => {
+    vi.mocked(captureWorkProgressForCwd).mockResolvedValue({
+      project: {
+        id: "proj-1",
+        name: "ManDev",
+        slug: "mandev",
+        localPath: "/Users/dev/mandev",
+      },
+      snapshot: {
+        id: "wp-1",
+        projectId: "proj-1",
+        branch: "main",
+        latestCommitHash: "abc1234",
+        latestCommitMessage: "feat: add cli",
+        latestCommitAuthor: "Dev",
+        latestCommitDate: "2026-06-08T04:00:00.000Z",
+        changedFiles: [],
+        changedFilesCount: 0,
+        gitStatusText: "",
+        summary: "main @ abc1234: feat: add cli (clean working tree)",
+        note: null,
+        createdAt: "2026-06-08T04:00:00.000Z",
+        updatedAt: "2026-06-08T04:00:00.000Z",
+      },
+      created: false,
+      skipped: true,
+      reason: "UNCHANGED",
+    });
+
+    const response = await POST(
+      mockRequest({
+        authorization: "Bearer dev-token",
+        body: {
+          cwd: "/Users/dev/mandev",
+          dedupe: true,
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      created: false,
+      skipped: true,
+      reason: "UNCHANGED",
       project: {
         id: "proj-1",
         name: "ManDev",

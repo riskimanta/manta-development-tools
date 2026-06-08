@@ -74,10 +74,14 @@ export async function POST(request: NextRequest) {
     const result = await captureWorkProgressForCwd({
       cwd: parsed.data.cwd,
       note: parsed.data.note ?? null,
+      dedupe: parsed.data.dedupe ?? false,
     });
 
     return NextResponse.json({
       ok: true,
+      created: result.created,
+      skipped: result.skipped,
+      ...(result.reason ? { reason: result.reason } : {}),
       project: result.project,
       snapshot: {
         id: result.snapshot.id,

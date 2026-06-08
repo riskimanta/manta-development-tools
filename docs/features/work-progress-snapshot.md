@@ -1,7 +1,7 @@
-# Work Progress Snapshot (Phase 5A + 5B)
+# Work Progress Snapshot (Phase 5A + 5B + 5C)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI)  
-**Scope:** Manual Git snapshot capture on Project Detail and via local CLI
+**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode)  
+**Scope:** Manual Git snapshot capture on Project Detail, local CLI, and polling watch mode
 
 ## Overview
 
@@ -39,6 +39,22 @@ node ./bin/mandev.mjs track
 
 ManDev matches the current working directory to the longest registered `localPath`, captures Git state, and stores a `WorkProgress` entry.
 
+### Watch mode (Phase 5C)
+
+Polling-based session tracking from the CLI:
+
+```bash
+mandev track --watch
+mandev track --watch --interval 60
+```
+
+Behavior:
+
+- Performs an immediate capture attempt on start
+- Polls every `--interval` seconds (default `300`, minimum `30`)
+- Sends `dedupe: true` to skip unchanged snapshots
+- Handles Ctrl+C gracefully
+
 ## Git capture
 
 | Data | Git command |
@@ -63,6 +79,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/lib/git-work-progress-capture.ts` | Git commands + status parsing |
 | `src/lib/project-local-path-match.ts` | cwd-to-project `localPath` matching |
 | `src/lib/mandev-agent-auth.ts` | `MANDEV_AGENT_TOKEN` verification |
+| `src/lib/work-progress-dedupe.ts` | Duplicate snapshot comparison |
 | `src/services/work-progress.ts` | Persist/list snapshots, cwd capture |
 | `src/app/projects/work-progress/actions.ts` | `captureWorkProgressAction` |
 | `src/app/api/work-progress/capture/route.ts` | Agent API for CLI capture |
@@ -76,7 +93,8 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 `POST /api/work-progress/capture`
 
 - Auth: `Authorization: Bearer <MANDEV_AGENT_TOKEN>`
-- Body: `{ cwd: string; note?: string }`
+- Body: `{ cwd: string; note?: string; dedupe?: boolean }`
+- When `dedupe: true`, unchanged Git state returns `created: false`, `skipped: true`, `reason: "UNCHANGED"`
 - Rejects unregistered cwd paths and unauthenticated requests
 - Middleware bypasses session cookie for this route; the route enforces the agent token
 
@@ -94,3 +112,4 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 - Snapshots are manual; no scheduled or automatic capture
 - Recent list capped at 10 entries on Project Detail
 - CLI requires ManDev app running locally and `MANDEV_AGENT_TOKEN` configured
+- Watch mode is polling-based only; no native filesystem watcher or background daemon
