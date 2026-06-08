@@ -60,7 +60,7 @@ export default async function WorkProgressSessionDetailPage({ params }: Props) {
         }
       />
 
-      <WorkProgressSessionDetail session={session} />
+      <WorkProgressSessionDetail project={project} session={session} />
     </>
   );
 }
