@@ -1,74 +1,50 @@
-# Phase 5E — Work Progress Session Detail Page: MERGED
+# Phase 5F — Work Progress AI Summary Prompt
 
 ## Summary
-Phase 5E added a detail page for derived Work Progress sessions, showing session summary, aggregated changed files, and snapshot timeline.
+Added a copyable AI summary prompt on the Work Progress Session Detail page. ManDev builds a structured prompt from session data for manual use in Cursor, Claude, or ChatGPT without calling an AI API.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/17
-- Status: MERGED
-- Merge commit: `fd0acf7`
-- Feature branch: `feat/work-progress-session-detail`
-- Latest feature branch commit before merge: `714ad84`
+## Branch
+`feat/work-progress-ai-summary-prompt`
+
+## Commit
+`e5a6783` — `feat: add work progress ai summary prompt`
 
 ## Delivered
-- Added derived session detail route
-- Added View details link from Work Progress sessions page
-- Added session detail page with project/session summary
-- Added aggregated changed files section
-- Added snapshot timeline section
-- Added safe handling for invalid/missing session IDs
+- Added Work Progress AI summary prompt builder
+- Added Copy AI summary prompt button on session detail page
+- Included project/session metadata, changed files, and snapshot timeline in copied prompt
+- Added UI copy explaining no AI API is called
 - Added tests
 - Updated docs
 
-## Manual verification
-- Pass
-- Verified through ManDev UI
-- Started ManDev with `pnpm dev`
-- Opened `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
-- Confirmed each session card has a **View details** link
-- Opened a session detail page at:
-  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
-- Confirmed detail page displays:
-  - project name
-  - back links
-  - branch
-  - started/ended time
-  - duration
-  - snapshot count
-  - first/latest commit
-  - latest commit message
-  - changed files count
-  - clean/dirty status
-  - aggregated changed files
-  - snapshot timeline
-- Invalid session URL check passed:
-  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id`
-  shows safe not-found page
-- Empty project check passed:
-  `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress`
-  still shows safe empty state
-
-## Validation on main
+## Validation
 | Check | Result |
 |-------|--------|
-| `pnpm test` | Pass — 489 tests |
+| `pnpm test` | Pass — 497 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Feature branch deleted locally: yes (already removed during merge)
-- Remote feature branch deleted/pruned: yes
-- Working tree clean: yes
+## Manual verification
+- Not performed yet
+- Recommended steps:
+  1. `git checkout feat/work-progress-ai-summary-prompt && pnpm dev`
+  2. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
+  3. Confirm **Copy AI summary prompt** appears near the session summary card
+  4. Click the button and paste into a text editor
+  5. Confirm prompt includes project name, branch, session time/duration, snapshot count, commit metadata, changed files, snapshot timeline, and requested AI output sections
+  6. Confirm helper text states ManDev does not call an AI API
+  7. Open an invalid session URL and confirm `notFound()` behavior is unchanged
+
+## PR
+- URL: `<pending>`
+- Status: NOT CREATED
+
+## Git status
+`<pending>`
 
 ## Known limitations
-- Sessions are derived from snapshots, not persisted as a dedicated table
-- Derived session detail links may change if future snapshots extend/regroup a session
-- No explicit start/stop session command yet
-- No AI-generated summary yet
-- No Notion integration
-- No Cursor extension
-- No background daemon
-
-## Final git status
-On branch `main`, up to date with `origin/main`. Working tree clean.
+- No AI API integration
+- No automatic AI-generated summary
+- No persisted summary field
+- User must paste the prompt manually into Cursor, Claude, ChatGPT, or another AI tool
+- Sessions are still derived from snapshots
