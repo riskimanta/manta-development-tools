@@ -2,6 +2,9 @@
   "name": "manta-development-tools",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "mandev": "./bin/mandev.mjs"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -14,7 +17,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "mandev:track": "node ./bin/mandev.mjs track"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

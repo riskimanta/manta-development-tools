@@ -8,11 +8,16 @@ import {
 } from "@/lib/mandev-session";
 
 const PUBLIC_PATH_PREFIXES = ["/login", "/logout"];
+const AGENT_API_PATHS = ["/api/work-progress/capture"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATH_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
+}
+
+function isAgentApiPath(pathname: string): boolean {
+  return AGENT_API_PATHS.includes(pathname);
 }
 
 export async function middleware(request: NextRequest) {
@@ -28,7 +33,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
-  if (isPublicPath(pathname)) {
+  if (isPublicPath(pathname) || isAgentApiPath(pathname)) {
     return NextResponse.next();
   }
 
