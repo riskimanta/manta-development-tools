@@ -1,67 +1,67 @@
-# Phase 5B — Local Work Progress Agent / CLI: MERGED
+# Phase 5C — Work Progress Watch Mode
 
 ## Summary
-Phase 5B added CLI-triggered Work Progress capture through `mandev track`. A user can run the local CLI from a registered project folder, and ManDev captures Git work progress through a protected local API route.
+Added polling-based watch mode for Work Progress capture through `mandev track --watch`.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/14
-- Status: MERGED
-- Merge commit: `4d05c91`
-- Feature branch: `feat/work-progress-local-agent`
-- Latest feature branch commit before merge: `0085172`
+## Branch
+`feat/work-progress-watch-mode`
+
+## Commit
+`d7b0fa1` — feat: add work progress watch mode
 
 ## Delivered
-- Added local API route for agent-triggered Work Progress capture
-- Added `MANDEV_AGENT_TOKEN` protection
-- Added CLI script `bin/mandev.mjs`
-- Added `mandev track` command
-- Added cwd-to-project matching by registered `localPath`
-- Added Work Progress card terminal usage hint
+- Added `mandev track --watch`
+- Added configurable polling interval
+- Added safe minimum interval guard
+- Added graceful Ctrl+C shutdown
+- Added duplicate snapshot prevention for watch mode
+- Added skipped unchanged response support
+- Updated Work Progress card terminal usage hint
 - Added tests
-- Added docs
+- Updated docs
+
+## Validation
+| Check | Result |
+|-------|--------|
+| `pnpm test` | Pass — 463 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
 ## Manual verification
 - Pass
 - Verified by dogfooding ManDev project itself
 - `.env.local` configured locally with `MANDEV_AGENT_TOKEN=dev-local-token`
 - Started ManDev with `pnpm dev`
-- Ran CLI from ManDev repository:
+- Ran one-time capture:
   ```bash
   cd /Users/riskimanta/Documents/manta-development-tools
   MANDEV_AGENT_TOKEN=dev-local-token node ./bin/mandev.mjs track
   ```
-- CLI printed success:
-  - project: `ManDev / mandev`
-  - branch: `feat/work-progress-local-agent`
-  - commit: `517ae7d`
-  - changed files: `0`
-  - snapshot: `2026-06-08T04:14:54.623Z`
-- Opened ManDev Project Detail
-- Confirmed a new Work Progress snapshot appeared in Recent snapshots
-- Snapshot displayed branch, latest commit, changed files count/status `Clean working tree`, and created timestamp `just now`
+- Ran watch mode:
+  ```bash
+  MANDEV_AGENT_TOKEN=dev-local-token node ./bin/mandev.mjs track --watch --interval 30
+  ```
+- Watch mode started successfully and printed cwd/base URL/interval
+- First capture attempt completed
+- Repeated unchanged polling attempts were skipped
+- A Git-visible working tree change created a new snapshot on the next interval
+- Ctrl+C stopped watch mode cleanly
 
-## Validation on main
-| Check | Result |
-|-------|--------|
-| `pnpm test` | Pass — 449 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/15
+- Status: OPEN
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Feature branch deleted locally: yes (already removed during merge)
-- Remote feature branch deleted/pruned: yes
-- Working tree clean: yes
+## Git status
+On branch `feat/work-progress-watch-mode`, up to date with `origin/feat/work-progress-watch-mode`. Working tree clean.
 
 ## Known limitations
-- Manual CLI trigger only
-- No file watcher
+- Polling-based only
+- No native file watcher
 - No background daemon
 - No Cursor extension
 - No Notion/AI integration
 - Requires ManDev app running locally
 - Requires `MANDEV_AGENT_TOKEN`
 - Requires registered project `localPath`
+- Watch mode only observes Git-visible state
 
-## Final git status
-On branch `main`, up to date with `origin/main`. Working tree clean.

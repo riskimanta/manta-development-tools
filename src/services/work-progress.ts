@@ -3,12 +3,14 @@ import type { WorkProgress } from "@prisma/client";
 import {
   buildWorkProgressSummary,
   captureGitWorkProgressSnapshot,
+  type GitWorkProgressSnapshot,
   type WorkProgressChangedFile,
 } from "@/lib/git-work-progress-capture";
 import {
   findBestMatchingProject,
   type ProjectLocalPathCandidate,
 } from "@/lib/project-local-path-match";
+import { isSameWorkProgressSnapshot } from "@/lib/work-progress-dedupe";
 import { db } from "@/lib/db";
 
 export type WorkProgressRecord = {
@@ -52,6 +54,9 @@ export type WorkProgressProjectMatch = ProjectLocalPathCandidate;
 export type WorkProgressCwdCaptureResult = {
   project: WorkProgressProjectMatch;
   snapshot: WorkProgressRecord;
+  created: boolean;
+  skipped: boolean;
+  reason?: "UNCHANGED";
 };
 
 function parseChangedFilesJson(raw: string): WorkProgressChangedFile[] {
@@ -191,9 +196,37 @@ export async function findProjectForWorkProgressCwd(
   return findBestMatchingProject(cwd, candidates);
 }
 
+async function persistGitWorkProgressSnapshot(
+  projectId: string,
+  snapshot: GitWorkProgressSnapshot,
+  note?: string | null,
+): Promise<WorkProgressRecord> {
+  const summary = buildWorkProgressSummary(snapshot);
+  const trimmedNote = note?.trim() || null;
+
+  const row = await db.workProgress.create({
+    data: {
+      projectId,
+      branch: snapshot.branch,
+      latestCommitHash: snapshot.latestCommitHash,
+      latestCommitMessage: snapshot.latestCommitMessage,
+      latestCommitAuthor: snapshot.latestCommitAuthor,
+      latestCommitDate: new Date(snapshot.latestCommitDate),
+      changedFilesJson: JSON.stringify(snapshot.changedFiles),
+      changedFilesCount: snapshot.changedFiles.length,
+      gitStatusText: snapshot.gitStatusText,
+      summary,
+      note: trimmedNote,
+    },
+  });
+
+  return toWorkProgressRecord(row);
+}
+
 export async function captureWorkProgressForCwd(input: {
   cwd: string;
   note?: string | null;
+  dedupe?: boolean;
 }): Promise<WorkProgressCwdCaptureResult> {
   const project = await findProjectForWorkProgressCwd(input.cwd);
   if (!project) {
@@ -203,11 +236,73 @@ export async function captureWorkProgressForCwd(input: {
     );
   }
 
-  const snapshot = await captureWorkProgressSnapshot(project.id, input.note);
+  if (!input.dedupe) {
+    const snapshot = await captureWorkProgressSnapshot(project.id, input.note);
+
+    return {
+      project,
+      snapshot,
+      created: true,
+      skipped: false,
+    };
+  }
+
+  const localPath = project.localPath.trim();
+  if (!localPath) {
+    throw new WorkProgressServiceError(
+      "LOCAL_PATH_MISSING",
+      "Set a local path on this project first, then capture Git work progress from that repository.",
+    );
+  }
+
+  const captureResult = await captureGitWorkProgressSnapshot(localPath);
+  if (!captureResult.ok) {
+    throw mapGitCaptureError(captureResult.code, captureResult.message);
+  }
+
+  const gitSnapshot = captureResult.snapshot;
+  const latestRow = await db.workProgress.findFirst({
+    where: { projectId: project.id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (
+    latestRow &&
+    isSameWorkProgressSnapshot(
+      {
+        branch: gitSnapshot.branch,
+        latestCommitHash: gitSnapshot.latestCommitHash,
+        gitStatusText: gitSnapshot.gitStatusText,
+        changedFilesJson: JSON.stringify(gitSnapshot.changedFiles),
+      },
+      {
+        branch: latestRow.branch,
+        latestCommitHash: latestRow.latestCommitHash,
+        gitStatusText: latestRow.gitStatusText,
+        changedFilesJson: latestRow.changedFilesJson,
+      },
+    )
+  ) {
+    return {
+      project,
+      snapshot: toWorkProgressRecord(latestRow),
+      created: false,
+      skipped: true,
+      reason: "UNCHANGED",
+    };
+  }
+
+  const snapshot = await persistGitWorkProgressSnapshot(
+    project.id,
+    gitSnapshot,
+    input.note,
+  );
 
   return {
     project,
     snapshot,
+    created: true,
+    skipped: false,
   };
 }
 

@@ -20,6 +20,7 @@ vi.mock("@/lib/db", () => ({
     workProgress: {
       create: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
     },
   },
 }));
@@ -231,11 +232,63 @@ describe("captureWorkProgressForCwd", () => {
       localPath: "/Users/dev/mandev",
     });
     expect(result.snapshot.id).toBe("wp-1");
+    expect(result.created).toBe(true);
+    expect(result.skipped).toBe(false);
     expect(db.workProgress.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         note: "CLI capture",
       }),
     });
+  });
+
+  it("skips create when dedupe is true and latest snapshot is unchanged", async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([mockProject] as never);
+    vi.mocked(captureGitWorkProgressSnapshot).mockResolvedValue({
+      ok: true,
+      snapshot: gitSnapshot,
+    });
+    vi.mocked(db.workProgress.findFirst).mockResolvedValue(mockRow);
+
+    const result = await captureWorkProgressForCwd({
+      cwd: "/Users/dev/mandev",
+      dedupe: true,
+    });
+
+    expect(result.created).toBe(false);
+    expect(result.skipped).toBe(true);
+    expect(result.reason).toBe("UNCHANGED");
+    expect(result.snapshot.id).toBe("wp-1");
+    expect(db.workProgress.create).not.toHaveBeenCalled();
+  });
+
+  it("creates snapshot when dedupe is true and git state changed", async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([mockProject] as never);
+    vi.mocked(captureGitWorkProgressSnapshot).mockResolvedValue({
+      ok: true,
+      snapshot: {
+        ...gitSnapshot,
+        gitStatusText: "?? temp.txt",
+        changedFiles: [{ status: "??", path: "temp.txt" }],
+      },
+    });
+    vi.mocked(db.workProgress.findFirst).mockResolvedValue(mockRow);
+    vi.mocked(db.workProgress.create).mockResolvedValue({
+      ...mockRow,
+      id: "wp-2",
+      changedFilesCount: 1,
+      changedFilesJson: JSON.stringify([{ status: "??", path: "temp.txt" }]),
+      gitStatusText: "?? temp.txt",
+    });
+
+    const result = await captureWorkProgressForCwd({
+      cwd: "/Users/dev/mandev",
+      dedupe: true,
+    });
+
+    expect(result.created).toBe(true);
+    expect(result.skipped).toBe(false);
+    expect(result.snapshot.id).toBe("wp-2");
+    expect(db.workProgress.create).toHaveBeenCalled();
   });
 
   it("throws when no project matches cwd", async () => {
@@ -277,6 +330,7 @@ describe("captureWorkProgressForCwd", () => {
       code: "NOT_GIT_REPOSITORY",
     });
   });
+
 });
 
 describe("listWorkProgressByProjectId", () => {

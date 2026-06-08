@@ -8,22 +8,27 @@ export type WorkProgressAgentErrorCode =
   | "NOT_GIT_REPOSITORY"
   | "CAPTURE_FAILED";
 
+export type WorkProgressAgentSnapshotSummary = {
+  id: string;
+  branch: string | null;
+  latestCommitHash: string | null;
+  latestCommitMessage: string | null;
+  changedFilesCount: number;
+  createdAt: string;
+};
+
 export type WorkProgressAgentSuccessResponse = {
   ok: true;
+  created: boolean;
+  skipped: boolean;
+  reason?: "UNCHANGED";
   project: {
     id: string;
     name: string;
     slug: string;
     localPath: string;
   };
-  snapshot: {
-    id: string;
-    branch: string | null;
-    latestCommitHash: string | null;
-    latestCommitMessage: string | null;
-    changedFilesCount: number;
-    createdAt: string;
-  };
+  snapshot: WorkProgressAgentSnapshotSummary;
 };
 
 export type WorkProgressAgentErrorResponse = {
