@@ -1,38 +1,75 @@
-# Phase 4C — Merge & Cleanup
+# Phase 5A — Work Progress Snapshot
 
-## Merge status
-Merged into `main`.
+## Summary
+Manual Git snapshot capture on Project Detail. Click **Capture progress** to inspect the project `localPath` repository and store branch, commit metadata, working tree status, and changed files as a `WorkProgress` entry.
 
-## PR
-- **#12** — https://github.com/riskimanta/manta-development-tools/pull/12
-- **Result:** MERGED
-- **Merge commit:** `deeed9f`
-- **Feature commit:** `1a97f41` — feat: add run profile run detail page
+## Branch
+`feat/work-progress-snapshot`
 
-## Delivered summary
-Per-run detail page at `/projects/[id]/run-profiles/[runProfileId]/runs/[runId]` with project/profile context, run metadata, and stdout/stderr previews. View All Runs list links each item via "View details". Ownership validated through `getRunProfileRunDetailPageData`.
+## Commits
+- `e844d24` — feat: add work progress snapshot capture
+- `<pending>` — docs: update work progress snapshot result
+
+## Changed files
+
+### Prisma / migration
+- `prisma/schema.prisma` — `WorkProgress` model + `Project.workProgressEntries`
+- `prisma/migrations/20260607120752_add_work_progress/migration.sql`
+
+### Git capture helper
+- `src/lib/git-work-progress-capture.ts` — Git commands + status parsing
+- `src/lib/git-work-progress-capture.test.ts`
+
+### Service layer
+- `src/services/work-progress.ts` — capture/list + serializable DTOs
+- `src/services/work-progress.test.ts`
+
+### Server Action
+- `src/app/projects/work-progress/actions.ts` — `captureWorkProgressAction`
+
+### UI components
+- `src/components/projects/capture-work-progress-button.tsx`
+- `src/components/projects/work-progress-list.tsx`
+- `src/components/projects/project-work-progress-card.tsx`
+
+### Project Detail integration
+- `src/app/(app)/projects/[id]/page.tsx` — Work progress card on Project Detail
+
+### Tests
+- `src/lib/git-work-progress-capture.test.ts`
+- `src/services/work-progress.test.ts`
+
+### Docs
+- `docs/features/work-progress-snapshot.md`
+- `docs/features/index.md`
+- `docs/features/path-map.md`
 
 ## Validation
 | Check | Result |
 |-------|--------|
-| `pnpm test` | Pass — 401 tests |
+| `pnpm test` | Pass — 417 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
+| `pnpm db:migrate` | Applied `add_work_progress` |
 
-## Cleanup
-| Item | Result |
-|------|--------|
-| PR #12 mergeable | Yes — CLEAN, no conflicts |
-| Local branch `feat/run-profiles-run-detail-page` | Deleted |
-| Remote branch `feat/run-profiles-run-detail-page` | Deleted (pruned stale ref) |
-| `main` synced with `origin/main` | Yes (ff-only) |
+## PR
+- URL: `<pending>`
+- Status: `<pending>`
 
 ## Git status
-On `main`, up to date with `origin/main`, clean working tree.
+`<pending>`
 
 ## Known limitations
-- No DB schema changes; detail page shows persisted stdout/stderr previews only (larger layout, not full logs)
-- No SSE/WebSocket or live updates
-- Recent Runs on project detail has no detail links (View All Runs only)
-- View All Runs capped at 25 runs; no pagination or filters
-- Managed Start/Stop/Restart and Phase 2A short execution unchanged
+- Manual capture only; no background agent, file watcher, or Notion/AI integration
+- Requires `localPath` pointing at a Git repo on the ManDev host
+- Read-only Git inspection; no commit/push from ManDev
+- Recent snapshots capped at 10 on Project Detail
+- Optional `note` field supported in action but not exposed in MVP UI
+
+## Manual verification checklist
+- Not performed yet
+- Recommended manual check:
+  1. Open ManDev Project Detail for the ManDev project itself
+  2. Ensure `localPath` points to the ManDev repo
+  3. Click **Capture progress**
+  4. Confirm a new snapshot appears with branch, latest commit, and changed files count
