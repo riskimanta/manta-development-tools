@@ -1,13 +1,14 @@
-# Phase 5J — Work Progress Search & Filter
+# Phase 5J — Work Progress Search & Filter: MERGED
 
 ## Summary
-Added server-rendered search and filter controls to the Work Progress Sessions page so users can quickly find derived sessions by text, branch, status, and saved summary state.
+Phase 5J added server-rendered search and filter controls to the Work Progress Sessions page so users can quickly find derived sessions by text, branch, status, saved summary state, and optional startedAt date range.
 
-## Branch
-`feat/work-progress-search-filter`
-
-## Commit
-`4b0f065` — `feat: add work progress search filters`
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/22
+- Status: MERGED
+- Merge commit: `eafdfe9`
+- Feature branch: `feat/work-progress-search-filter`
+- Latest feature branch commit before merge: `e2a8ca3`
 
 ## Delivered
 - Added Work Progress session filter/query parsing helpers
@@ -15,21 +16,12 @@ Added server-rendered search and filter controls to the Work Progress Sessions p
 - Added branch filter
 - Added clean/dirty status filter
 - Added has-summary/no-summary filter
-- Added optional startedAt date range filter (UTC day range)
+- Added optional startedAt date range filter using UTC day behavior
 - Added filter form on Work Progress sessions page
 - Added result count and no-match state
 - Preserved existing session cards and View details links
 - Added tests
 - Updated docs
-
-## Validation
-| Check | Result |
-|-------|--------|
-| `pnpm db:generate` | Pass |
-| `pnpm db:migrate` | Pass — migration already applied |
-| `pnpm test` | Pass — 565 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
 
 ## Manual verification
 - Pass
@@ -53,14 +45,24 @@ Added server-rendered search and filter controls to the Work Progress Sessions p
 - Confirmed no-match state appears when filters match nothing
 - Confirmed **Clear filters** resets the list
 - Confirmed **View details** links still open the correct session detail pages
-- Empty project check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` still shows safe empty state
+- Empty project check passed:
+  `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress`
+  still shows safe empty state
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/22
-- Status: OPEN
+## Validation on main
+| Check | Result |
+|-------|--------|
+| `pnpm db:generate` | Pass |
+| `pnpm db:migrate` | Pass — migration already applied |
+| `pnpm test` | Pass — 565 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
-## Git status
-On branch `feat/work-progress-search-filter`, up to date with `origin/feat/work-progress-search-filter`, working tree clean.
+## Cleanup
+- Local `main` synced with `origin/main`
+- Feature branch deleted locally: yes (already removed during `gh pr merge`)
+- Remote feature branch deleted/pruned: yes
+- Working tree clean: yes
 
 ## Known limitations
 - Search/filter applies to derived sessions, not a full-text search index
@@ -70,3 +72,6 @@ On branch `feat/work-progress-search-filter`, up to date with `origin/feat/work-
 - Sessions are still derived from snapshots
 - Saved summaries are attached to derived session IDs
 - Date range uses session `startedAt` within selected UTC days
+
+## Final git status
+On branch `main`, up to date with `origin/main`, working tree clean.
