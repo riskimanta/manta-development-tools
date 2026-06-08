@@ -81,6 +81,20 @@ export function workProgressStatusLabel(isClean: boolean): string {
   return isClean ? "Clean working tree" : "Dirty working tree";
 }
 
+export function buildWorkProgressSessionId(
+  firstSnapshotId: string,
+  latestSnapshotId: string,
+): string {
+  return `session-${firstSnapshotId}-${latestSnapshotId}`;
+}
+
+export function findWorkProgressSessionById(
+  sessions: WorkProgressSession[],
+  sessionId: string,
+): WorkProgressSession | null {
+  return sessions.find((session) => session.id === sessionId) ?? null;
+}
+
 function buildSession(snapshots: WorkProgressRecord[]): WorkProgressSession {
   const first = snapshots[0]!;
   const latest = snapshots[snapshots.length - 1]!;
@@ -94,7 +108,7 @@ function buildSession(snapshots: WorkProgressRecord[]): WorkProgressSession {
   const isClean = isWorkProgressSnapshotClean(latest);
 
   return {
-    id: `session-${first.id}-${latest.id}`,
+    id: buildWorkProgressSessionId(first.id, latest.id),
     projectId: first.projectId,
     branch: latest.branch,
     startedAt,

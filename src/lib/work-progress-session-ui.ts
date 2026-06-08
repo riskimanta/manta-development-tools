@@ -20,6 +20,10 @@ export function formatSessionDurationMs(durationMs: number): string {
   return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
 }
 
+export function formatWorkProgressSessionTitle(branch: string | null): string {
+  return branch ? `Work session on ${branch}` : "Work session";
+}
+
 export function formatWorkProgressTimestamp(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {

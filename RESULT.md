@@ -1,70 +1,67 @@
-# Phase 5D — Work Progress Session View: MERGED
+# Phase 5E — Work Progress Session Detail Page
 
 ## Summary
-Phase 5D added a project-level Work Progress Session View that groups existing WorkProgress snapshots into derived development sessions.
+Added a detail page for derived Work Progress sessions, showing session summary, aggregated changed files, and snapshot timeline.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/16
-- Status: MERGED
-- Merge commit: `86ae225`
-- Feature branch: `feat/work-progress-session-view`
-- Latest feature branch commit before merge: `e7ed4de`
+## Branch
+`feat/work-progress-session-detail`
+
+## Commit
+`794072f` — `feat: add work progress session detail page`
 
 ## Delivered
-- Added derived Work Progress session grouping
-- Added session grouping helper
-- Added changed files aggregation/deduplication
-- Added project-level Work Progress sessions page `/projects/[id]/work-progress`
-- Added Project Detail link to sessions page
-- Added session UI with branch, duration, snapshot count, latest commit, changed files, and clean/dirty status
+- Added derived session detail route
+- Added View details link from Work Progress sessions page
+- Added session detail page with project/session summary
+- Added aggregated changed files section
+- Added snapshot timeline section
+- Added safe handling for invalid/missing session IDs
 - Added tests
 - Updated docs
+
+## Validation
+| Check | Result |
+|-------|--------|
+| `pnpm test` | Pass — 489 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
 ## Manual verification
 - Pass
 - Verified through ManDev UI
 - Started ManDev with `pnpm dev`
-- Opened ManDev Project Detail
-- Confirmed Work Progress card still renders
-- Confirmed Capture progress button and Recent snapshots remain visible
-- Confirmed `View all work progress` / sessions link appears
 - Opened `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
-- Confirmed existing WorkProgress snapshots are grouped into sessions:
-  - 4 snapshots → 3 sessions
-- Confirmed session cards display:
+- Confirmed each session card has a **View details** link
+- Opened a session detail page at:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
+- Confirmed detail page displays:
+  - project name
+  - back links
   - branch
   - started/ended time
   - duration
   - snapshot count
-  - latest commit hash/message
+  - first/latest commit
+  - latest commit message
   - changed files count
   - clean/dirty status
-  - changed files/snapshot preview
-- Empty state check passed:
-  - `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress`
-  - Expenses Tracker v3 shows clear empty state
+  - aggregated changed files
+  - snapshot timeline
+- Invalid session URL check: Pass — `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id` shows safe not-found page
+- Empty project check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` still shows safe empty state
 
-## Validation on main
-| Check | Result |
-|-------|--------|
-| `pnpm test` | Pass — 480 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/17
+- Status: OPEN
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Feature branch deleted locally: yes (already removed during merge)
-- Remote feature branch deleted/pruned: yes
-- Working tree clean: yes
+## Git status
+On branch `feat/work-progress-session-detail`, up to date with `origin/feat/work-progress-session-detail`. Latest commit `39013d2` (manual verification docs).
 
 ## Known limitations
 - Sessions are derived from snapshots, not persisted as a dedicated table
+- Derived session detail links may change if future snapshots extend/regroup a session
 - No explicit start/stop session command yet
-- No background daemon
-- No native file watcher
-- No Cursor extension
-- No Notion integration
 - No AI-generated summary yet
-
-## Final git status
-On branch `main`, up to date with `origin/main`. Working tree clean.
+- No Notion integration
+- No Cursor extension
+- No background daemon

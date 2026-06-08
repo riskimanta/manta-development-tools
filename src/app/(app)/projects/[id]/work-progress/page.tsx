@@ -95,7 +95,7 @@ export default async function ProjectWorkProgressPage({ params }: Props) {
             </CardContent>
           </Card>
         ) : (
-          <WorkProgressSessionList sessions={sessions} />
+          <WorkProgressSessionList projectId={project.id} sessions={sessions} />
         )}
       </section>
     </>

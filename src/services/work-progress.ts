@@ -12,6 +12,7 @@ import {
 } from "@/lib/project-local-path-match";
 import { isSameWorkProgressSnapshot } from "@/lib/work-progress-dedupe";
 import {
+  findWorkProgressSessionById,
   groupWorkProgressIntoSessions,
   type WorkProgressSession,
 } from "@/lib/work-progress-session";
@@ -63,6 +64,16 @@ export type WorkProgressSessionsPageData = {
   };
   sessions: WorkProgressSession[];
   entryCount: number;
+};
+
+export type WorkProgressSessionDetailPageData = {
+  project: {
+    id: string;
+    name: string;
+    slug: string;
+    localPath: string | null;
+  };
+  session: WorkProgressSession;
 };
 
 export type WorkProgressProjectMatch = ProjectLocalPathCandidate;
@@ -374,5 +385,37 @@ export async function getWorkProgressSessionsPageData(
     project,
     sessions,
     entryCount: entries.length,
+  };
+}
+
+export async function getWorkProgressSessionDetailPageData(
+  projectId: string,
+  sessionId: string,
+): Promise<WorkProgressSessionDetailPageData | null> {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      localPath: true,
+    },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  const entries = await listWorkProgressEntriesByProjectId(projectId);
+  const sessions = groupWorkProgressIntoSessions(entries);
+  const session = findWorkProgressSessionById(sessions, sessionId);
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    project,
+    session,
   };
 }

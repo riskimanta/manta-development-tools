@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   aggregateSessionChangedFiles,
+  buildWorkProgressSessionId,
+  findWorkProgressSessionById,
   getLatestWorkProgressSession,
   groupWorkProgressIntoSessions,
   isWorkProgressSnapshotClean,
@@ -157,6 +159,38 @@ describe("status helpers", () => {
   it("labels clean and dirty status", () => {
     expect(workProgressStatusLabel(true)).toBe("Clean working tree");
     expect(workProgressStatusLabel(false)).toBe("Dirty working tree");
+  });
+});
+
+describe("buildWorkProgressSessionId", () => {
+  it("builds a stable derived session ID", () => {
+    expect(buildWorkProgressSessionId("wp-1", "wp-2")).toBe("session-wp-1-wp-2");
+  });
+});
+
+describe("findWorkProgressSessionById", () => {
+  it("finds a session by derived ID", () => {
+    const sessions = groupWorkProgressIntoSessions([
+      makeSnapshot({
+        id: "wp-1",
+        createdAt: "2026-06-08T10:00:00.000Z",
+      }),
+    ]);
+
+    expect(findWorkProgressSessionById(sessions, "session-wp-1-wp-1")).toEqual(
+      sessions[0],
+    );
+  });
+
+  it("returns null for an invalid session ID", () => {
+    const sessions = groupWorkProgressIntoSessions([
+      makeSnapshot({
+        id: "wp-1",
+        createdAt: "2026-06-08T10:00:00.000Z",
+      }),
+    ]);
+
+    expect(findWorkProgressSessionById(sessions, "session-missing")).toBeNull();
   });
 });
 

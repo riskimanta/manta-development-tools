@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,6 +15,7 @@ import {
 } from "@/lib/work-progress-session-ui";
 import type { WorkProgressSession } from "@/lib/work-progress-session";
 import { formatRelativeTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 const statusCodeClassName =
   "inline-block min-w-[1.75rem] rounded bg-muted px-1 py-0.5 text-center font-mono text-[10px] text-foreground/90";
@@ -52,7 +56,13 @@ function SessionSnapshotPreview({
   );
 }
 
-function WorkProgressSessionCard({ session }: { session: WorkProgressSession }) {
+function WorkProgressSessionCard({
+  projectId,
+  session,
+}: {
+  projectId: string;
+  session: WorkProgressSession;
+}) {
   return (
     <Card>
       <CardHeader className="space-y-2 pb-3">
@@ -109,22 +119,34 @@ function WorkProgressSessionCard({ session }: { session: WorkProgressSession }) 
         )}
 
         <SessionSnapshotPreview session={session} />
+
+        <Link
+          href={`/projects/${projectId}/work-progress/sessions/${session.id}`}
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          View details
+        </Link>
       </CardContent>
     </Card>
   );
 }
 
 type Props = {
+  projectId: string;
   sessions: WorkProgressSession[];
   className?: string;
 };
 
-export function WorkProgressSessionList({ sessions, className }: Props) {
+export function WorkProgressSessionList({
+  projectId,
+  sessions,
+  className,
+}: Props) {
   return (
     <ul className={className ?? "space-y-4"}>
       {sessions.map((session) => (
         <li key={session.id}>
-          <WorkProgressSessionCard session={session} />
+          <WorkProgressSessionCard projectId={projectId} session={session} />
         </li>
       ))}
     </ul>

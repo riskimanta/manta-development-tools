@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatSessionDurationMs,
+  formatWorkProgressSessionTitle,
   formatWorkProgressTimestamp,
 } from "@/lib/work-progress-session-ui";
 
@@ -11,6 +12,13 @@ describe("formatSessionDurationMs", () => {
     expect(formatSessionDurationMs(5 * 60_000)).toBe("5m");
     expect(formatSessionDurationMs(80 * 60_000)).toBe("1h 20m");
     expect(formatSessionDurationMs(26 * 60 * 60_000)).toBe("1d 2h");
+  });
+});
+
+describe("formatWorkProgressSessionTitle", () => {
+  it("formats branch-based session title", () => {
+    expect(formatWorkProgressSessionTitle("main")).toBe("Work session on main");
+    expect(formatWorkProgressSessionTitle(null)).toBe("Work session");
   });
 });
 
