@@ -1,7 +1,7 @@
-# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G + 5H + 5I)
+# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G + 5H + 5I + 5J)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary + Phase 5H sessions list summary preview + Phase 5I Project Detail dashboard summary)  
-**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, manual saved AI summaries, saved summary previews on the sessions list, and a compact Work Progress dashboard summary on Project Detail
+**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary + Phase 5H sessions list summary preview + Phase 5I Project Detail dashboard summary + Phase 5J sessions list search/filter)  
+**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, manual saved AI summaries, saved summary previews on the sessions list, a compact Work Progress dashboard summary on Project Detail, and server-rendered search/filter on the Work Progress sessions page
 
 ## Overview
 
@@ -108,6 +108,18 @@ Summaries are still saved manually from the session detail page. ManDev does **n
 
 The dashboard summary is derived from existing `WorkProgress` snapshots and saved `WorkProgressSessionSummary` rows. ManDev does **not** call any AI API. Summaries are still saved manually from the session detail page.
 
+### Sessions list search and filter (Phase 5J)
+
+1. Open `/projects/[id]/work-progress`.
+2. Use the server-rendered filter form above the session list.
+3. Filter by search text, branch, clean/dirty status, saved summary state, and optional date range.
+4. Filters are applied via URL query params (`q`, `branch`, `status`, `summary`, `from`, `to`) on GET submit.
+5. The page shows `Showing X of Y sessions`, a no-match state when filters exclude all sessions, and **Clear filters** to reset.
+
+Search matches branch, commit hash/message, changed file paths, saved summary text/preview, and snapshot commit messages (case-insensitive). Branch filter is exact match. Clean/dirty uses the existing derived session status helper. Summary filter supports `has` / `none`. Date range filters sessions whose `startedAt` falls within the selected UTC day range; invalid dates are ignored safely.
+
+No new database migration. No AI API is called. Filtering applies to derived sessions in memory after grouping snapshots.
+
 ## Git capture
 
 | Data | Git command |
@@ -136,6 +148,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/lib/mandev-agent-auth.ts` | `MANDEV_AGENT_TOKEN` verification |
 | `src/lib/work-progress-dedupe.ts` | Duplicate snapshot comparison |
 | `src/lib/work-progress-session.ts` | Derived session grouping |
+| `src/lib/work-progress-session-filter.ts` | Sessions list query parsing and in-memory filtering |
 | `src/lib/work-progress-dashboard-summary.ts` | Project Detail dashboard summary builder |
 | `src/lib/work-progress-session-ui.ts` | Session duration/timestamp formatting and dashboard/list summary labels |
 | `src/lib/work-progress-session-summary-preview.ts` | Saved summary preview text helper |
@@ -153,6 +166,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/components/projects/capture-work-progress-button.tsx` | Capture button + toasts |
 | `src/components/projects/work-progress-terminal-hint.tsx` | Terminal usage hint |
 | `src/components/projects/work-progress-session-list.tsx` | Session cards with saved summary preview on sessions page |
+| `src/components/projects/work-progress-session-filters.tsx` | Server-rendered GET filter form on sessions page |
 | `src/components/projects/work-progress-session-detail.tsx` | Session detail summary and timeline |
 | `src/components/projects/work-progress-ai-summary-prompt-actions.tsx` | Copy AI summary prompt button |
 | `src/components/projects/work-progress-session-summary-form.tsx` | AI Summary save/edit form |
@@ -189,3 +203,5 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 - Sessions list shows a short preview only; full summary editing remains on the session detail page
 - Project Detail dashboard summary is derived from snapshots and saved summaries; no AI API is called
 - Dashboard summary editing is not available on Project Detail; use the session detail page
+- Sessions list search/filter is in-memory over derived sessions; no full-text search index or saved filters yet
+- Date range filtering uses session `startedAt` within the selected UTC day range

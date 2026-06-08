@@ -500,6 +500,10 @@ describe("getWorkProgressSessionsPageData", () => {
     expect(data?.entryCount).toBe(1);
     expect(data?.sessions).toHaveLength(1);
     expect(data?.sessions[0]?.savedSummary).toBeNull();
+    expect(data?.totalSessionCount).toBe(1);
+    expect(data?.filteredCount).toBe(1);
+    expect(data?.branchOptions).toEqual(["main"]);
+    expect(data?.filters).toEqual({ status: "all", summary: "all" });
   });
 
   it("includes saved summary preview when summary exists", async () => {
@@ -604,6 +608,60 @@ describe("getWorkProgressSessionsPageData", () => {
 
     expect(data?.sessions[0]?.savedSummary).toBeNull();
     expect(db.workProgressSessionSummary.findMany).toHaveBeenCalled();
+  });
+
+  it("returns filteredCount and branch options from sessions", async () => {
+    const olderSnapshot = {
+      ...mockRow,
+      id: "wp-0",
+      branch: "feat/filter",
+      createdAt: new Date("2026-06-06T04:00:00.000Z"),
+    };
+    const newerSnapshot = {
+      ...mockRow,
+      id: "wp-2",
+      createdAt: new Date("2026-06-08T04:00:00.000Z"),
+    };
+
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    } as never);
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([
+      olderSnapshot,
+      mockRow,
+      newerSnapshot,
+    ]);
+
+    const data = await getWorkProgressSessionsPageData("proj-1", {
+      branch: "feat/filter",
+    });
+
+    expect(data?.totalSessionCount).toBe(3);
+    expect(data?.filteredCount).toBe(1);
+    expect(data?.sessions).toHaveLength(1);
+    expect(data?.sessions[0]?.branch).toBe("feat/filter");
+    expect(data?.branchOptions).toEqual(["feat/filter", "main"]);
+  });
+
+  it("works when project has no snapshots", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    } as never);
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([]);
+
+    const data = await getWorkProgressSessionsPageData("proj-1");
+
+    expect(data?.entryCount).toBe(0);
+    expect(data?.totalSessionCount).toBe(0);
+    expect(data?.filteredCount).toBe(0);
+    expect(data?.sessions).toEqual([]);
+    expect(data?.branchOptions).toEqual([]);
   });
 
   it("treats empty saved summary as null without crashing", async () => {

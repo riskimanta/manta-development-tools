@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { WorkProgressSessionFilters } from "@/components/projects/work-progress-session-filters";
 import { WorkProgressSessionList } from "@/components/projects/work-progress-session-list";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -11,23 +12,44 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatWorkProgressSessionFilterCountLabel } from "@/lib/work-progress-session-filter";
 import { cn } from "@/lib/utils";
 import { getWorkProgressSessionsPageData } from "@/services/work-progress";
 import { notFound } from "next/navigation";
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    q?: string;
+    branch?: string;
+    status?: string;
+    summary?: string;
+    from?: string;
+    to?: string;
+  }>;
 };
 
-export default async function ProjectWorkProgressPage({ params }: Props) {
+export default async function ProjectWorkProgressPage({
+  params,
+  searchParams,
+}: Props) {
   const { id } = await params;
-  const data = await getWorkProgressSessionsPageData(id);
+  const sp = await searchParams;
+  const data = await getWorkProgressSessionsPageData(id, sp);
 
   if (!data) {
     notFound();
   }
 
-  const { project, sessions, entryCount } = data;
+  const {
+    project,
+    sessions,
+    entryCount,
+    totalSessionCount,
+    filteredCount,
+    branchOptions,
+    filters,
+  } = data;
 
   return (
     <>
@@ -78,24 +100,53 @@ export default async function ProjectWorkProgressPage({ params }: Props) {
           <p className="text-xs text-muted-foreground">
             {entryCount === 0
               ? "No snapshots captured yet."
-              : `${entryCount} snapshot${entryCount === 1 ? "" : "s"} grouped into ${sessions.length} session${sessions.length === 1 ? "" : "s"}.`}
+              : `${entryCount} snapshot${entryCount === 1 ? "" : "s"} grouped into ${totalSessionCount} session${totalSessionCount === 1 ? "" : "s"}.`}
           </p>
         </CardContent>
       </Card>
 
       <section className="space-y-4">
-        <h2 className="font-heading text-lg font-semibold">
-          Work progress sessions
-        </h2>
-        {sessions.length === 0 ? (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-heading text-lg font-semibold">
+            Work progress sessions
+          </h2>
+          {totalSessionCount > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {formatWorkProgressSessionFilterCountLabel(
+                filteredCount,
+                totalSessionCount,
+              )}
+            </p>
+          ) : null}
+        </div>
+
+        {entryCount === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              No work progress sessions yet. Capture progress from Project Detail
-              or run <code className="font-mono">mandev track</code>.
+              No work progress captured yet.
             </CardContent>
           </Card>
         ) : (
-          <WorkProgressSessionList projectId={project.id} sessions={sessions} />
+          <>
+            <WorkProgressSessionFilters
+              projectId={project.id}
+              filters={filters}
+              branchOptions={branchOptions}
+            />
+
+            {filteredCount === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                  No work progress sessions match these filters.
+                </CardContent>
+              </Card>
+            ) : (
+              <WorkProgressSessionList
+                projectId={project.id}
+                sessions={sessions}
+              />
+            )}
+          </>
         )}
       </section>
     </>

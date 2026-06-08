@@ -19,6 +19,11 @@ import { db } from "@/lib/db";
 import { buildWorkProgressDashboardSummary } from "@/lib/work-progress-dashboard-summary";
 import type { WorkProgressDashboardSummary } from "@/lib/work-progress-dashboard-summary";
 import {
+  resolveWorkProgressSessionFilters,
+  type WorkProgressSessionFilters,
+  type WorkProgressSessionSearchParams,
+} from "@/lib/work-progress-session-filter";
+import {
   listWorkProgressSessionSummariesBySessionIds,
   toWorkProgressSessionSavedSummary,
   type WorkProgressSessionSavedSummary,
@@ -76,6 +81,10 @@ export type WorkProgressSessionsPageData = {
   };
   sessions: WorkProgressSessionListItem[];
   entryCount: number;
+  totalSessionCount: number;
+  filteredCount: number;
+  branchOptions: string[];
+  filters: WorkProgressSessionFilters;
 };
 
 export type WorkProgressProjectMatch = ProjectLocalPathCandidate;
@@ -378,6 +387,7 @@ export async function getWorkProgressDashboardSummaryByProjectId(
 
 export async function getWorkProgressSessionsPageData(
   projectId: string,
+  searchParams: WorkProgressSessionSearchParams = {},
 ): Promise<WorkProgressSessionsPageData | null> {
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -415,10 +425,19 @@ export async function getWorkProgressSessionsPageData(
     },
   );
 
+  const filterResult = resolveWorkProgressSessionFilters(
+    sessionsWithSummaries,
+    searchParams,
+  );
+
   return {
     project,
-    sessions: sessionsWithSummaries,
+    sessions: filterResult.sessions,
     entryCount: entries.length,
+    totalSessionCount: filterResult.totalSessionCount,
+    filteredCount: filterResult.filteredCount,
+    branchOptions: filterResult.branchOptions,
+    filters: filterResult.filters,
   };
 }
 
