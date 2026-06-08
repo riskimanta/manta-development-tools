@@ -12,6 +12,7 @@ Manual Git snapshot capture on Project Detail. Click **Capture progress** to ins
 - `103e403` — docs: finalize work progress snapshot report
 - `45da5b2` — docs: verify work progress snapshot manually
 - `fe2d9b4` — docs: finalize manual verification report
+- `dd594bd` — docs: sync manual verification report metadata
 
 ## Changed files
 
