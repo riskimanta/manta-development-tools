@@ -7,7 +7,7 @@ Added polling-based watch mode for Work Progress capture through `mandev track -
 `feat/work-progress-watch-mode`
 
 ## Commit
-`<pending>` — feat: add work progress watch mode
+`d7b0fa1` — feat: add work progress watch mode
 
 ## Delivered
 - Added `mandev track --watch`
@@ -45,11 +45,11 @@ Added polling-based watch mode for Work Progress capture through `mandev track -
   6. Edit `RESULT.md` locally, wait for next interval, confirm new snapshot is created
 
 ## PR
-- URL: `<pending>`
-- Status: `<pending>`
+- URL: https://github.com/riskimanta/manta-development-tools/pull/15
+- Status: OPEN
 
 ## Git status
-`<pending>`
+On branch `feat/work-progress-watch-mode`, up to date with `origin/feat/work-progress-watch-mode`. Working tree clean.
 
 ## Known limitations
 - Polling-based only
