@@ -16,6 +16,11 @@ import {
   type WorkProgressSession,
 } from "@/lib/work-progress-session";
 import { db } from "@/lib/db";
+import {
+  listWorkProgressSessionSummariesBySessionIds,
+  toWorkProgressSessionSavedSummary,
+  type WorkProgressSessionSavedSummary,
+} from "@/services/work-progress-session-summaries";
 
 export type WorkProgressRecord = {
   id: string;
@@ -54,6 +59,10 @@ export class WorkProgressServiceError extends Error {
 export const WORK_PROGRESS_UI_LIMIT = 10;
 export const WORK_PROGRESS_SESSIONS_ENTRY_LIMIT = 200;
 
+export type WorkProgressSessionListItem = WorkProgressSession & {
+  savedSummary: WorkProgressSessionSavedSummary | null;
+};
+
 export type WorkProgressSessionsPageData = {
   project: {
     id: string;
@@ -61,7 +70,7 @@ export type WorkProgressSessionsPageData = {
     slug: string;
     localPath: string | null;
   };
-  sessions: WorkProgressSession[];
+  sessions: WorkProgressSessionListItem[];
   entryCount: number;
 };
 
@@ -369,10 +378,29 @@ export async function getWorkProgressSessionsPageData(
 
   const entries = await listWorkProgressEntriesByProjectId(projectId);
   const sessions = groupWorkProgressIntoSessions(entries);
+  const summaryRows = await listWorkProgressSessionSummariesBySessionIds(
+    projectId,
+    sessions.map((session) => session.id),
+  );
+  const summariesBySessionId = new Map(
+    summaryRows.map((summary) => [summary.sessionId, summary] as const),
+  );
+
+  const sessionsWithSummaries: WorkProgressSessionListItem[] = sessions.map(
+    (session) => {
+      const summary = summariesBySessionId.get(session.id);
+      return {
+        ...session,
+        savedSummary: summary
+          ? toWorkProgressSessionSavedSummary(summary)
+          : null,
+      };
+    },
+  );
 
   return {
     project,
-    sessions,
+    sessions: sessionsWithSummaries,
     entryCount: entries.length,
   };
 }

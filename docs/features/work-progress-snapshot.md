@@ -1,7 +1,7 @@
-# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G)
+# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G + 5H)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary)  
-**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, and manual saved AI summaries
+**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary + Phase 5H sessions list summary preview)  
+**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, manual saved AI summaries, and saved summary previews on the sessions list
 
 ## Overview
 
@@ -89,6 +89,15 @@ Saved summaries are stored in `WorkProgressSessionSummary` keyed by `projectId` 
 
 Known limitation: sessions remain derived from snapshots, so a saved summary is attached to the current derived session ID. That ID may change if future snapshots extend or regroup the session.
 
+### Saved AI summary preview (Phase 5H)
+
+1. Open `/projects/[id]/work-progress`.
+2. Each session card shows whether a saved AI summary exists.
+3. When present, the card displays an **AI Summary** label, a short preview of the saved text, and the last updated timestamp.
+4. When missing, the card shows **No saved AI summary yet.**
+
+Summaries are still saved manually from the session detail page. ManDev does **not** call any AI API. Full summary editing remains on `/projects/[id]/work-progress/sessions/[sessionId]`.
+
 ## Git capture
 
 | Data | Git command |
@@ -117,10 +126,11 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/lib/mandev-agent-auth.ts` | `MANDEV_AGENT_TOKEN` verification |
 | `src/lib/work-progress-dedupe.ts` | Duplicate snapshot comparison |
 | `src/lib/work-progress-session.ts` | Derived session grouping |
-| `src/lib/work-progress-session-ui.ts` | Session duration/timestamp formatting |
+| `src/lib/work-progress-session-ui.ts` | Session duration/timestamp formatting and list summary labels |
+| `src/lib/work-progress-session-summary-preview.ts` | Saved summary preview text helper |
 | `src/lib/work-progress-ai-summary-prompt.ts` | Structured AI summary prompt builder |
 | `src/services/work-progress.ts` | Persist/list snapshots, cwd capture, sessions |
-| `src/services/work-progress-session-summaries.ts` | Saved session summary get/upsert and detail page data |
+| `src/services/work-progress-session-summaries.ts` | Saved session summary get/list/upsert and detail page data |
 | `src/lib/validations/work-progress-session-summary.ts` | Summary save validation |
 | `src/app/projects/work-progress/session-summaries/actions.ts` | `saveWorkProgressSessionSummaryAction` |
 | `src/app/(app)/projects/[id]/work-progress/page.tsx` | Work Progress sessions page |
@@ -131,7 +141,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/components/projects/project-work-progress-card.tsx` | Project Detail card |
 | `src/components/projects/capture-work-progress-button.tsx` | Capture button + toasts |
 | `src/components/projects/work-progress-terminal-hint.tsx` | Terminal usage hint |
-| `src/components/projects/work-progress-session-list.tsx` | Session cards on sessions page |
+| `src/components/projects/work-progress-session-list.tsx` | Session cards with saved summary preview on sessions page |
 | `src/components/projects/work-progress-session-detail.tsx` | Session detail summary and timeline |
 | `src/components/projects/work-progress-ai-summary-prompt-actions.tsx` | Copy AI summary prompt button |
 | `src/components/projects/work-progress-session-summary-form.tsx` | AI Summary save/edit form |
@@ -165,3 +175,4 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 - Derived session detail links may change if future snapshots extend or regroup a session
 - No automatic AI-generated session summary; users copy a prompt, generate externally, and paste the result back into ManDev manually
 - Saved summaries are attached to derived session IDs and may become orphaned if future snapshots extend or regroup the session
+- Sessions list shows a short preview only; full summary editing remains on the session detail page

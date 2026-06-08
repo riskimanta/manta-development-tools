@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import {
   getWorkProgressSessionDetailPageData,
   getWorkProgressSessionSummary,
+  listWorkProgressSessionSummariesBySessionIds,
+  toWorkProgressSessionSavedSummary,
   upsertWorkProgressSessionSummary,
   WorkProgressSessionSummaryServiceError,
 } from "@/services/work-progress-session-summaries";
@@ -19,6 +21,7 @@ vi.mock("@/lib/db", () => ({
     },
     workProgressSessionSummary: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       upsert: vi.fn(),
     },
   },
@@ -155,6 +158,82 @@ describe("upsertWorkProgressSessionSummary", () => {
     ).rejects.toMatchObject({
       code: "PROJECT_NOT_FOUND",
     });
+  });
+});
+
+describe("toWorkProgressSessionSavedSummary", () => {
+  it("builds preview metadata for non-empty summaries", () => {
+    const result = toWorkProgressSessionSavedSummary({
+      id: "summary-1",
+      projectId: "proj-1",
+      sessionId,
+      summaryMarkdown: "Saved AI summary",
+      firstSnapshotId: "wp-1",
+      latestSnapshotId: "wp-1",
+      branch: "main",
+      sessionStartedAt: "2026-06-07T04:00:00.000Z",
+      sessionEndedAt: "2026-06-07T04:00:00.000Z",
+      createdAt: "2026-06-08T04:00:00.000Z",
+      updatedAt: "2026-06-08T05:00:00.000Z",
+    });
+
+    expect(result).toEqual({
+      id: "summary-1",
+      summaryMarkdown: "Saved AI summary",
+      preview: "Saved AI summary",
+      updatedAt: "2026-06-08T05:00:00.000Z",
+    });
+  });
+
+  it("returns null for empty summaries", () => {
+    expect(
+      toWorkProgressSessionSavedSummary({
+        id: "summary-1",
+        projectId: "proj-1",
+        sessionId,
+        summaryMarkdown: "  \n ",
+        firstSnapshotId: "wp-1",
+        latestSnapshotId: "wp-1",
+        branch: "main",
+        sessionStartedAt: null,
+        sessionEndedAt: null,
+        createdAt: "2026-06-08T04:00:00.000Z",
+        updatedAt: "2026-06-08T05:00:00.000Z",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("listWorkProgressSessionSummariesBySessionIds", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns summaries for requested session IDs", async () => {
+    vi.mocked(db.workProgressSessionSummary.findMany).mockResolvedValue([
+      mockSummaryRow,
+    ]);
+
+    const result = await listWorkProgressSessionSummariesBySessionIds("proj-1", [
+      sessionId,
+    ]);
+
+    expect(db.workProgressSessionSummary.findMany).toHaveBeenCalledWith({
+      where: {
+        projectId: "proj-1",
+        sessionId: {
+          in: [sessionId],
+        },
+      },
+    });
+    expect(result[0]?.summaryMarkdown).toBe("Saved AI summary");
+  });
+
+  it("returns empty array when no session IDs are provided", async () => {
+    const result = await listWorkProgressSessionSummariesBySessionIds("proj-1", []);
+
+    expect(result).toEqual([]);
+    expect(db.workProgressSessionSummary.findMany).not.toHaveBeenCalled();
   });
 });
 
