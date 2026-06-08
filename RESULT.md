@@ -1,13 +1,14 @@
-# Phase 5H — Saved AI Summary Preview in Sessions List
+# Phase 5H — Saved AI Summary Preview in Sessions List: MERGED
 
 ## Summary
-Added saved AI summary previews to the Work Progress Sessions page so users can quickly scan which derived sessions already have saved summaries.
+Phase 5H added saved AI summary previews to the Work Progress Sessions page so users can quickly scan which derived sessions already have saved summaries.
 
-## Branch
-`feat/work-progress-summary-preview`
-
-## Commit
-`348c5d2` — `feat: show work progress summary previews`
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/20
+- Status: MERGED
+- Merge commit: `04dee4c`
+- Feature branch: `feat/work-progress-summary-preview`
+- Latest feature branch commit before merge: `a53a23d`
 
 ## Delivered
 - Added saved summary data to Work Progress session list loading
@@ -17,15 +18,6 @@ Added saved AI summary previews to the Work Progress Sessions page so users can 
 - Preserved View details link for full summary editing
 - Added tests
 - Updated docs
-
-## Validation
-| Check | Result |
-|-------|--------|
-| `pnpm db:generate` | Pass |
-| `pnpm db:migrate` | Pass — migration already applied |
-| `pnpm test` | Pass — 526 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
 
 ## Manual verification
 - Pass
@@ -45,14 +37,24 @@ Added saved AI summary previews to the Work Progress Sessions page so users can 
   - **View details** link
 - Confirmed **View details** opens the correct session detail page
 - Confirmed sessions without saved summary show **No saved AI summary yet.**
-- Empty project check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` still shows safe empty state
+- Empty project check passed:
+  `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress`
+  still shows safe empty state
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/20
-- Status: OPEN
+## Validation on main
+| Check | Result |
+|-------|--------|
+| `pnpm db:generate` | Pass |
+| `pnpm db:migrate` | Pass — migration already applied |
+| `pnpm test` | Pass — 526 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
-## Git status
-On branch `feat/work-progress-summary-preview`, up to date with `origin/feat/work-progress-summary-preview`, working tree clean
+## Cleanup
+- Local `main` synced with `origin/main`
+- Feature branch deleted locally: yes
+- Remote feature branch deleted/pruned: yes
+- Working tree clean: yes
 
 ## Known limitations
 - No AI API integration
@@ -61,3 +63,6 @@ On branch `feat/work-progress-summary-preview`, up to date with `origin/feat/wor
 - Sessions are still derived from snapshots
 - Saved summaries are attached to derived session IDs
 - Derived session IDs may change if future snapshots extend/regroup the session
+
+## Final git status
+On branch `main`, up to date with `origin/main`, working tree clean
