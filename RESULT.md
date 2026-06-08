@@ -7,7 +7,7 @@ Added CLI-triggered Work Progress capture through `mandev track`.
 `feat/work-progress-local-agent`
 
 ## Commit
-`<pending>` — feat: add local work progress agent
+`a5e9a28` — feat: add local work progress agent
 
 ## Delivered
 - Local API route for agent-triggered capture
@@ -40,11 +40,11 @@ Added CLI-triggered Work Progress capture through `mandev track`.
   5. Open ManDev Project Detail and confirm a new snapshot appears
 
 ## PR
-- URL: `<pending>`
-- Status: `<pending>`
+- URL: https://github.com/riskimanta/manta-development-tools/pull/14
+- Status: OPEN
 
 ## Git status
-`<pending>`
+On branch `feat/work-progress-local-agent`, up to date with `origin/feat/work-progress-local-agent`. Working tree clean.
 
 ## Known limitations
 - Manual CLI trigger only
