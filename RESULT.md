@@ -27,15 +27,28 @@ Added a detail page for derived Work Progress sessions, showing session summary,
 | `pnpm lint` | Pass |
 
 ## Manual verification
-- Not performed yet
-- Recommended steps:
-  1. `git checkout feat/work-progress-session-detail && pnpm dev`
-  2. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
-  3. Confirm each session card has a **View details** link
-  4. Click **View details** and confirm `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/[sessionId]` loads
-  5. Confirm summary, changed files, snapshot timeline, and back links render
-  6. Open an invalid session URL and confirm not-found handling
-  7. Open work progress for empty project `cmoonw6y80000ulrxz1nevs1p` and confirm empty state
+- Pass
+- Verified through ManDev UI
+- Started ManDev with `pnpm dev`
+- Opened `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
+- Confirmed each session card has a **View details** link
+- Opened a session detail page at:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
+- Confirmed detail page displays:
+  - project name
+  - back links
+  - branch
+  - started/ended time
+  - duration
+  - snapshot count
+  - first/latest commit
+  - latest commit message
+  - changed files count
+  - clean/dirty status
+  - aggregated changed files
+  - snapshot timeline
+- Invalid session URL check: Pass — `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id` shows safe not-found page
+- Empty project check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` still shows safe empty state
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/17
