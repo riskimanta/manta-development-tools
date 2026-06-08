@@ -6,7 +6,9 @@ import {
   captureWorkProgressForCwd,
   captureWorkProgressSnapshot,
   findProjectForWorkProgressCwd,
+  getWorkProgressSessionsPageData,
   listWorkProgressByProjectId,
+  listWorkProgressSessionsByProjectId,
   toWorkProgressRecord,
   WorkProgressServiceError,
 } from "@/services/work-progress";
@@ -350,5 +352,65 @@ describe("listWorkProgressByProjectId", () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0]?.id).toBe("wp-1");
+  });
+});
+
+describe("listWorkProgressSessionsByProjectId", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns grouped sessions for existing snapshots", async () => {
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([
+      mockRow,
+      {
+        ...mockRow,
+        id: "wp-2",
+        createdAt: new Date("2026-06-07T05:00:00.000Z"),
+      },
+    ]);
+
+    const sessions = await listWorkProgressSessionsByProjectId("proj-1");
+
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]?.snapshotCount).toBe(2);
+  });
+
+  it("returns empty sessions when project has no snapshots", async () => {
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([]);
+
+    const sessions = await listWorkProgressSessionsByProjectId("proj-1");
+
+    expect(sessions).toEqual([]);
+  });
+});
+
+describe("getWorkProgressSessionsPageData", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns null when project is missing", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue(null);
+
+    const data = await getWorkProgressSessionsPageData("missing");
+
+    expect(data).toBeNull();
+  });
+
+  it("returns project and sessions for existing project", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    } as never);
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([mockRow]);
+
+    const data = await getWorkProgressSessionsPageData("proj-1");
+
+    expect(data?.project.name).toBe("ManDev");
+    expect(data?.entryCount).toBe(1);
+    expect(data?.sessions).toHaveLength(1);
   });
 });

@@ -11,6 +11,10 @@ import {
   type ProjectLocalPathCandidate,
 } from "@/lib/project-local-path-match";
 import { isSameWorkProgressSnapshot } from "@/lib/work-progress-dedupe";
+import {
+  groupWorkProgressIntoSessions,
+  type WorkProgressSession,
+} from "@/lib/work-progress-session";
 import { db } from "@/lib/db";
 
 export type WorkProgressRecord = {
@@ -48,6 +52,18 @@ export class WorkProgressServiceError extends Error {
 }
 
 export const WORK_PROGRESS_UI_LIMIT = 10;
+export const WORK_PROGRESS_SESSIONS_ENTRY_LIMIT = 200;
+
+export type WorkProgressSessionsPageData = {
+  project: {
+    id: string;
+    name: string;
+    slug: string;
+    localPath: string | null;
+  };
+  sessions: WorkProgressSession[];
+  entryCount: number;
+};
 
 export type WorkProgressProjectMatch = ProjectLocalPathCandidate;
 
@@ -306,9 +322,9 @@ export async function captureWorkProgressForCwd(input: {
   };
 }
 
-export async function listWorkProgressByProjectId(
+export async function listWorkProgressEntriesByProjectId(
   projectId: string,
-  limit: number = WORK_PROGRESS_UI_LIMIT,
+  limit: number = WORK_PROGRESS_SESSIONS_ENTRY_LIMIT,
 ): Promise<WorkProgressRecord[]> {
   const rows = await db.workProgress.findMany({
     where: { projectId },
@@ -317,4 +333,46 @@ export async function listWorkProgressByProjectId(
   });
 
   return rows.map(toWorkProgressRecord);
+}
+
+export async function listWorkProgressByProjectId(
+  projectId: string,
+  limit: number = WORK_PROGRESS_UI_LIMIT,
+): Promise<WorkProgressRecord[]> {
+  return listWorkProgressEntriesByProjectId(projectId, limit);
+}
+
+export async function listWorkProgressSessionsByProjectId(
+  projectId: string,
+  limit: number = WORK_PROGRESS_SESSIONS_ENTRY_LIMIT,
+): Promise<WorkProgressSession[]> {
+  const entries = await listWorkProgressEntriesByProjectId(projectId, limit);
+  return groupWorkProgressIntoSessions(entries);
+}
+
+export async function getWorkProgressSessionsPageData(
+  projectId: string,
+): Promise<WorkProgressSessionsPageData | null> {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      localPath: true,
+    },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  const entries = await listWorkProgressEntriesByProjectId(projectId);
+  const sessions = groupWorkProgressIntoSessions(entries);
+
+  return {
+    project,
+    sessions,
+    entryCount: entries.length,
+  };
 }

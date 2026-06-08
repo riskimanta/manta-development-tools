@@ -1,69 +1,64 @@
-# Phase 5C — Work Progress Watch Mode: MERGED
+# Phase 5D — Work Progress Session View
 
 ## Summary
-Phase 5C added polling-based watch mode for Work Progress capture through `mandev track --watch`. Watch mode periodically captures Git-visible project progress and skips duplicate unchanged snapshots.
+Added a project-level Work Progress Session View that groups existing WorkProgress snapshots into derived development sessions.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/15
-- Status: MERGED
-- Merge commit: `2006dcf`
-- Feature branch: `feat/work-progress-watch-mode`
-- Latest feature branch commit before merge: `cb7c058`
+## Branch
+`feat/work-progress-session-view`
+
+## Commit
+`3d19d7e` — feat: add work progress session view
 
 ## Delivered
-- Added `mandev track --watch`
-- Added configurable polling interval
-- Added safe minimum interval guard
-- Added graceful Ctrl+C shutdown
-- Added duplicate snapshot prevention for watch mode
-- Added skipped unchanged response support
-- Updated Work Progress card terminal usage hint
+- Added derived Work Progress session grouping
+- Added session grouping helper
+- Added changed files aggregation/deduplication
+- Added Work Progress sessions page
+- Added Project Detail link to sessions page
+- Added session UI with branch, duration, snapshot count, latest commit, changed files, and clean/dirty status
 - Added tests
 - Updated docs
 
-## Manual verification
-- Pass
-- Verified by dogfooding ManDev project itself
-- `.env.local` configured locally with `MANDEV_AGENT_TOKEN=dev-local-token`
-- Started ManDev with `pnpm dev`
-- Ran one-time capture:
-  ```bash
-  cd /Users/riskimanta/Documents/manta-development-tools
-  MANDEV_AGENT_TOKEN=dev-local-token node ./bin/mandev.mjs track
-  ```
-- Ran watch mode:
-  ```bash
-  MANDEV_AGENT_TOKEN=dev-local-token node ./bin/mandev.mjs track --watch --interval 30
-  ```
-- Watch mode started successfully and printed cwd/base URL/interval
-- First capture attempt completed
-- Repeated unchanged polling attempts were skipped
-- A Git-visible working tree change created a new snapshot on the next interval
-- Ctrl+C stopped watch mode cleanly
-
-## Validation on main
+## Validation
 | Check | Result |
 |-------|--------|
-| `pnpm test` | Pass — 463 tests |
+| `pnpm test` | Pass — 480 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Feature branch deleted locally: yes (already removed during merge)
-- Remote feature branch deleted/pruned: yes
-- Working tree clean: yes
+## Manual verification
+- Pass
+- Verified through ManDev UI
+- Started ManDev with `pnpm dev`
+- Opened ManDev Project Detail
+- Confirmed Work Progress card still renders
+- Confirmed Capture progress button and Recent snapshots remain visible
+- Confirmed `View all work progress` / sessions link appears
+- Opened `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
+- Confirmed existing WorkProgress snapshots are grouped into sessions (4 snapshots → 3 sessions)
+- Confirmed session cards display:
+  - branch
+  - started/ended time
+  - duration
+  - snapshot count
+  - latest commit hash/message
+  - changed files count
+  - clean/dirty status
+  - changed files/snapshot preview
+- Empty state check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` shows clear empty state for Expenses Tracker v3
+
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/16
+- Status: OPEN
+
+## Git status
+On branch `feat/work-progress-session-view`, up to date with `origin/feat/work-progress-session-view`. Working tree clean.
 
 ## Known limitations
-- Polling-based only
-- No native file watcher
+- Sessions are derived from snapshots, not persisted as a dedicated table
+- No explicit start/stop session command yet
 - No background daemon
+- No native file watcher
 - No Cursor extension
 - No Notion/AI integration
-- Requires ManDev app running locally
-- Requires `MANDEV_AGENT_TOKEN`
-- Requires registered project `localPath`
-- Watch mode only observes Git-visible state
-
-## Final git status
-On branch `main`, up to date with `origin/main`. Working tree clean.
+- No AI-generated summary yet
