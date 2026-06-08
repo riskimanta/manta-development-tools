@@ -97,6 +97,10 @@ describe("middleware config matcher", () => {
       expect(pathnameMatchesMiddleware(pathname)).toBe(true);
     }
   });
+
+  it("includes the work progress agent API route in middleware invocation", () => {
+    expect(pathnameMatchesMiddleware("/api/work-progress/capture")).toBe(true);
+  });
 });
 
 describe("middleware auth routing", () => {
@@ -146,6 +150,14 @@ describe("middleware auth routing", () => {
     const token = await signMandevSession();
 
     const res = await middleware(mockRequest("/projects", token));
+
+    expect(res.status).toBe(200);
+  });
+
+  it("allows the work progress agent API route without a session cookie", async () => {
+    setAuthEnv(VALID_PASSWORD, VALID_SECRET);
+
+    const res = await middleware(mockRequest("/api/work-progress/capture"));
 
     expect(res.status).toBe(200);
   });

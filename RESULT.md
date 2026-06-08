@@ -1,60 +1,57 @@
-# Phase 5A — Work Progress Snapshot: MERGED
+# Phase 5B — Local Work Progress Agent / CLI
 
 ## Summary
-Phase 5A added manual Git snapshot capture on Project Detail. Clicking **Capture progress** inspects the project `localPath` Git repository and stores branch, latest commit metadata, working tree status, and changed files as a `WorkProgress` entry.
+Added CLI-triggered Work Progress capture through `mandev track`.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/13
-- Status: MERGED
-- Merge commit: `6e99823`
-- Feature branch: `feat/work-progress-snapshot`
-- Latest feature branch commit before merge: `db0e8dd`
+## Branch
+`feat/work-progress-local-agent`
+
+## Commit
+`<pending>` — feat: add local work progress agent
 
 ## Delivered
-- Added Prisma `WorkProgress` model and `Project.workProgressEntries`
-- Added migration `20260607120752_add_work_progress`
-- Added Git work progress capture helper
-- Added Work Progress service layer
-- Added `captureWorkProgressAction`
-- Added Work Progress card on Project Detail
-- Added Capture progress button
-- Added Recent snapshots list
-- Added tests for Git parsing and service logic
-- Added docs for Work Progress Snapshot
+- Local API route for agent-triggered capture
+- Agent token protection with `MANDEV_AGENT_TOKEN`
+- CLI script `bin/mandev.mjs`
+- `mandev track` command
+- cwd-to-project matching by registered `localPath`
+- Work Progress card terminal usage hint
+- Tests
+- Docs
 
-## Manual verification
-- Pass
-- Verified by dogfooding ManDev project itself
-- Opened ManDev Project Detail
-- Confirmed `localPath` points to:
-  `/Users/riskimanta/Documents/manta-development-tools`
-- Clicked **Capture progress**
-- New snapshot appeared in Recent snapshots
-- Snapshot displayed:
-  - branch: `FEAT/WORK-PROGRESS-SNAPSHOT`
-  - commit: `103e403`
-  - message: `docs: finalize work progress snapshot report (clean working tree)`
-  - status: `Clean working tree`
-
-## Validation on main
+## Validation
 | Check | Result |
 |-------|--------|
-| `pnpm test` | Pass — 417 tests |
+| `pnpm test` | Pass — 449 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Feature branch deleted locally: yes (already removed during merge)
-- Remote feature branch deleted/pruned: yes
-- Working tree clean: yes
+## Manual verification
+- Not performed yet
+- Recommended manual steps:
+  1. Add `MANDEV_AGENT_TOKEN=dev-local-token` to `.env.local`
+  2. Start ManDev with `pnpm dev`
+  3. Run:
+     ```bash
+     cd /Users/riskimanta/Documents/manta-development-tools
+     MANDEV_AGENT_TOKEN=dev-local-token node ./bin/mandev.mjs track
+     ```
+  4. Confirm CLI prints success
+  5. Open ManDev Project Detail and confirm a new snapshot appears
+
+## PR
+- URL: `<pending>`
+- Status: `<pending>`
+
+## Git status
+`<pending>`
 
 ## Known limitations
-- Manual capture only; no background agent, file watcher, or Notion/AI integration
-- Requires `localPath` pointing at a Git repo on the ManDev host
-- Read-only Git inspection; no commit/push from ManDev
-- Recent snapshots capped at 10 on Project Detail
-- Optional `note` field supported in action but not exposed in MVP UI
-
-## Final git status
-On branch `main`, up to date with `origin/main`. Working tree clean.
+- Manual CLI trigger only
+- No file watcher
+- No background daemon
+- No Cursor extension
+- No Notion/AI integration
+- Requires ManDev app running locally
+- Requires `MANDEV_AGENT_TOKEN`
+- Requires registered project `localPath`

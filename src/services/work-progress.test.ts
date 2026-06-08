@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 
 import {
+  captureWorkProgressForCwd,
   captureWorkProgressSnapshot,
+  findProjectForWorkProgressCwd,
   listWorkProgressByProjectId,
   toWorkProgressRecord,
   WorkProgressServiceError,
@@ -13,6 +15,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     project: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
     },
     workProgress: {
       create: vi.fn(),
@@ -39,6 +42,7 @@ import { captureGitWorkProgressSnapshot } from "@/lib/git-work-progress-capture"
 const mockProject = {
   id: "proj-1",
   name: "ManDev",
+  slug: "mandev",
   localPath: "/Users/dev/mandev",
 };
 
@@ -149,6 +153,127 @@ describe("captureWorkProgressSnapshot", () => {
     });
 
     await expect(captureWorkProgressSnapshot("proj-1")).rejects.toMatchObject({
+      code: "NOT_GIT_REPOSITORY",
+    });
+  });
+});
+
+describe("findProjectForWorkProgressCwd", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns the longest matching registered project", async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([
+      {
+        id: "proj-parent",
+        name: "Parent",
+        slug: "parent",
+        localPath: "/Users/dev",
+      },
+      {
+        id: "proj-1",
+        name: "ManDev",
+        slug: "mandev",
+        localPath: "/Users/dev/mandev",
+      },
+    ] as never);
+
+    const result = await findProjectForWorkProgressCwd("/Users/dev/mandev/src");
+
+    expect(result).toEqual({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    });
+  });
+
+  it("returns null when cwd does not match any registered project", async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([
+      {
+        id: "proj-1",
+        name: "ManDev",
+        slug: "mandev",
+        localPath: "/Users/dev/mandev",
+      },
+    ] as never);
+
+    const result = await findProjectForWorkProgressCwd("/tmp/other");
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("captureWorkProgressForCwd", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("captures work progress for a matching cwd", async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([mockProject] as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue(mockProject as never);
+    vi.mocked(captureGitWorkProgressSnapshot).mockResolvedValue({
+      ok: true,
+      snapshot: gitSnapshot,
+    });
+    vi.mocked(db.workProgress.create).mockResolvedValue(mockRow);
+
+    const result = await captureWorkProgressForCwd({
+      cwd: "/Users/dev/mandev",
+      note: "CLI capture",
+    });
+
+    expect(result.project).toEqual({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    });
+    expect(result.snapshot.id).toBe("wp-1");
+    expect(db.workProgress.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        note: "CLI capture",
+      }),
+    });
+  });
+
+  it("throws when no project matches cwd", async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([]);
+
+    await expect(
+      captureWorkProgressForCwd({ cwd: "/tmp/unregistered" }),
+    ).rejects.toMatchObject({
+      code: "PROJECT_NOT_FOUND",
+    });
+  });
+
+  it("throws when matched project has missing localPath during capture", async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([mockProject] as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      ...mockProject,
+      localPath: null,
+    } as never);
+
+    await expect(
+      captureWorkProgressForCwd({ cwd: "/Users/dev/mandev" }),
+    ).rejects.toMatchObject({
+      code: "LOCAL_PATH_MISSING",
+    });
+  });
+
+  it("throws when git capture fails", async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([mockProject] as never);
+    vi.mocked(db.project.findUnique).mockResolvedValue(mockProject as never);
+    vi.mocked(captureGitWorkProgressSnapshot).mockResolvedValue({
+      ok: false,
+      code: "NOT_GIT_REPOSITORY",
+      message: "Local path is not a Git repository",
+    });
+
+    await expect(
+      captureWorkProgressForCwd({ cwd: "/Users/dev/mandev" }),
+    ).rejects.toMatchObject({
       code: "NOT_GIT_REPOSITORY",
     });
   });

@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CaptureWorkProgressButton } from "@/components/projects/capture-work-progress-button";
+import { WorkProgressTerminalHint } from "@/components/projects/work-progress-terminal-hint";
 import { WorkProgressList } from "@/components/projects/work-progress-list";
 import type { WorkProgressRecord } from "@/services/work-progress";
 
@@ -34,6 +35,8 @@ export function ProjectWorkProgressCard({
           projectId={projectId}
           localPath={localPath}
         />
+
+        {localPath?.trim() ? <WorkProgressTerminalHint /> : null}
 
         <section className="space-y-2">
           <h3 className="text-sm font-medium">Recent snapshots</h3>

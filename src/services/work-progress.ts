@@ -5,6 +5,10 @@ import {
   captureGitWorkProgressSnapshot,
   type WorkProgressChangedFile,
 } from "@/lib/git-work-progress-capture";
+import {
+  findBestMatchingProject,
+  type ProjectLocalPathCandidate,
+} from "@/lib/project-local-path-match";
 import { db } from "@/lib/db";
 
 export type WorkProgressRecord = {
@@ -42,6 +46,13 @@ export class WorkProgressServiceError extends Error {
 }
 
 export const WORK_PROGRESS_UI_LIMIT = 10;
+
+export type WorkProgressProjectMatch = ProjectLocalPathCandidate;
+
+export type WorkProgressCwdCaptureResult = {
+  project: WorkProgressProjectMatch;
+  snapshot: WorkProgressRecord;
+};
 
 function parseChangedFilesJson(raw: string): WorkProgressChangedFile[] {
   try {
@@ -142,6 +153,62 @@ export async function captureWorkProgressSnapshot(
   });
 
   return toWorkProgressRecord(row);
+}
+
+export async function findProjectForWorkProgressCwd(
+  cwd: string,
+): Promise<WorkProgressProjectMatch | null> {
+  const projects = await db.project.findMany({
+    where: {
+      localPath: {
+        not: null,
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      localPath: true,
+    },
+  });
+
+  const candidates = projects.flatMap((project) => {
+    const localPath = project.localPath?.trim();
+    if (!localPath) {
+      return [];
+    }
+
+    return [
+      {
+        id: project.id,
+        name: project.name,
+        slug: project.slug,
+        localPath,
+      },
+    ];
+  });
+
+  return findBestMatchingProject(cwd, candidates);
+}
+
+export async function captureWorkProgressForCwd(input: {
+  cwd: string;
+  note?: string | null;
+}): Promise<WorkProgressCwdCaptureResult> {
+  const project = await findProjectForWorkProgressCwd(input.cwd);
+  if (!project) {
+    throw new WorkProgressServiceError(
+      "PROJECT_NOT_FOUND",
+      "No registered ManDev project matches the current working directory. Run mandev track from a folder whose localPath is registered in ManDev.",
+    );
+  }
+
+  const snapshot = await captureWorkProgressSnapshot(project.id, input.note);
+
+  return {
+    project,
+    snapshot,
+  };
 }
 
 export async function listWorkProgressByProjectId(
