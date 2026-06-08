@@ -1,7 +1,7 @@
-# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G + 5H)
+# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G + 5H + 5I)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary + Phase 5H sessions list summary preview)  
-**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, manual saved AI summaries, and saved summary previews on the sessions list
+**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary + Phase 5H sessions list summary preview + Phase 5I Project Detail dashboard summary)  
+**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, manual saved AI summaries, saved summary previews on the sessions list, and a compact Work Progress dashboard summary on Project Detail
 
 ## Overview
 
@@ -17,6 +17,7 @@ Supports dogfooding: register ManDev as a project whose `localPath` points at th
 2. In the **Work progress** card, click **Capture progress**.
 3. ManDev runs read-only Git commands against the project `localPath` and stores a `WorkProgress` row.
 4. Recent snapshots appear in the card (newest first, up to 10).
+5. A compact **Summary** section shows last activity, snapshot/session counts, sessions with saved summaries, the latest derived session, and the latest saved AI summary preview when available.
 
 ### Local CLI (Phase 5B)
 
@@ -98,6 +99,15 @@ Known limitation: sessions remain derived from snapshots, so a saved summary is 
 
 Summaries are still saved manually from the session detail page. ManDev does **not** call any AI API. Full summary editing remains on `/projects/[id]/work-progress/sessions/[sessionId]`.
 
+### Project Detail dashboard summary (Phase 5I)
+
+1. Open **Project Detail**.
+2. The **Work progress** card shows a compact dashboard summary above **Recent snapshots**.
+3. Summary fields include last activity, snapshot count, derived session count, sessions with saved summaries, latest session metadata, and the latest saved AI summary preview.
+4. When no snapshots exist, the summary shows **No work progress captured yet.** Capture progress and terminal guidance remain available when `localPath` is set.
+
+The dashboard summary is derived from existing `WorkProgress` snapshots and saved `WorkProgressSessionSummary` rows. ManDev does **not** call any AI API. Summaries are still saved manually from the session detail page.
+
 ## Git capture
 
 | Data | Git command |
@@ -126,10 +136,11 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/lib/mandev-agent-auth.ts` | `MANDEV_AGENT_TOKEN` verification |
 | `src/lib/work-progress-dedupe.ts` | Duplicate snapshot comparison |
 | `src/lib/work-progress-session.ts` | Derived session grouping |
-| `src/lib/work-progress-session-ui.ts` | Session duration/timestamp formatting and list summary labels |
+| `src/lib/work-progress-dashboard-summary.ts` | Project Detail dashboard summary builder |
+| `src/lib/work-progress-session-ui.ts` | Session duration/timestamp formatting and dashboard/list summary labels |
 | `src/lib/work-progress-session-summary-preview.ts` | Saved summary preview text helper |
 | `src/lib/work-progress-ai-summary-prompt.ts` | Structured AI summary prompt builder |
-| `src/services/work-progress.ts` | Persist/list snapshots, cwd capture, sessions |
+| `src/services/work-progress.ts` | Persist/list snapshots, cwd capture, sessions, dashboard summary |
 | `src/services/work-progress-session-summaries.ts` | Saved session summary get/list/upsert and detail page data |
 | `src/lib/validations/work-progress-session-summary.ts` | Summary save validation |
 | `src/app/projects/work-progress/session-summaries/actions.ts` | `saveWorkProgressSessionSummaryAction` |
@@ -138,7 +149,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/app/projects/work-progress/actions.ts` | `captureWorkProgressAction` |
 | `src/app/api/work-progress/capture/route.ts` | Agent API for CLI capture |
 | `bin/mandev.mjs` | `mandev track` CLI |
-| `src/components/projects/project-work-progress-card.tsx` | Project Detail card |
+| `src/components/projects/project-work-progress-card.tsx` | Project Detail card with dashboard summary |
 | `src/components/projects/capture-work-progress-button.tsx` | Capture button + toasts |
 | `src/components/projects/work-progress-terminal-hint.tsx` | Terminal usage hint |
 | `src/components/projects/work-progress-session-list.tsx` | Session cards with saved summary preview on sessions page |
@@ -176,3 +187,5 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 - No automatic AI-generated session summary; users copy a prompt, generate externally, and paste the result back into ManDev manually
 - Saved summaries are attached to derived session IDs and may become orphaned if future snapshots extend or regroup the session
 - Sessions list shows a short preview only; full summary editing remains on the session detail page
+- Project Detail dashboard summary is derived from snapshots and saved summaries; no AI API is called
+- Dashboard summary editing is not available on Project Detail; use the session detail page

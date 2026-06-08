@@ -29,6 +29,20 @@ export const WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL = "AI Summary";
 export const WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL =
   "No saved AI summary yet.";
 
+export const WORK_PROGRESS_DASHBOARD_NO_SNAPSHOTS_LABEL =
+  "No work progress captured yet.";
+
+export const WORK_PROGRESS_DASHBOARD_SUMMARY_SECTION_LABEL = "Summary";
+
+export const WORK_PROGRESS_DASHBOARD_LATEST_SESSION_LABEL = "Latest session";
+
+export const WORK_PROGRESS_DASHBOARD_LATEST_SAVED_SUMMARY_LABEL =
+  "Latest saved AI summary";
+
+export function formatWorkProgressCleanDirtyLabel(isClean: boolean): string {
+  return isClean ? "Clean working tree" : "Dirty working tree";
+}
+
 export function formatWorkProgressTimestamp(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {

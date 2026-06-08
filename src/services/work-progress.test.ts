@@ -6,6 +6,7 @@ import {
   captureWorkProgressForCwd,
   captureWorkProgressSnapshot,
   findProjectForWorkProgressCwd,
+  getWorkProgressDashboardSummaryByProjectId,
   getWorkProgressSessionsPageData,
   listWorkProgressByProjectId,
   listWorkProgressSessionsByProjectId,
@@ -385,6 +386,72 @@ describe("listWorkProgressSessionsByProjectId", () => {
     const sessions = await listWorkProgressSessionsByProjectId("proj-1");
 
     expect(sessions).toEqual([]);
+  });
+});
+
+describe("getWorkProgressDashboardSummaryByProjectId", () => {
+  const sessionId = "session-wp-1-wp-1";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(db.workProgressSessionSummary.findMany).mockResolvedValue([]);
+  });
+
+  it("returns empty summary when project has no snapshots", async () => {
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([]);
+
+    const summary = await getWorkProgressDashboardSummaryByProjectId("proj-1");
+
+    expect(summary.snapshotCount).toBe(0);
+    expect(summary.latestSession).toBeNull();
+    expect(summary.latestSavedSummary).toBeNull();
+  });
+
+  it("returns dashboard counts and latest session for snapshots", async () => {
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([mockRow]);
+
+    const summary = await getWorkProgressDashboardSummaryByProjectId("proj-1");
+
+    expect(summary.snapshotCount).toBe(1);
+    expect(summary.sessionCount).toBe(1);
+    expect(summary.latestSession?.id).toBe(sessionId);
+    expect(summary.latestSnapshotAt).toBe("2026-06-07T04:00:00.000Z");
+  });
+
+  it("loads summaries for derived session IDs", async () => {
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([mockRow]);
+    vi.mocked(db.workProgressSessionSummary.findMany).mockResolvedValue([
+      {
+        id: "summary-1",
+        projectId: "proj-1",
+        sessionId,
+        summaryMarkdown: "Dashboard summary preview",
+        firstSnapshotId: "wp-1",
+        latestSnapshotId: "wp-1",
+        branch: "main",
+        sessionStartedAt: new Date("2026-06-07T04:00:00.000Z"),
+        sessionEndedAt: new Date("2026-06-07T04:00:00.000Z"),
+        createdAt: new Date("2026-06-08T04:00:00.000Z"),
+        updatedAt: new Date("2026-06-08T05:00:00.000Z"),
+      },
+    ]);
+
+    const summary = await getWorkProgressDashboardSummaryByProjectId("proj-1");
+
+    expect(summary.sessionsWithSummariesCount).toBe(1);
+    expect(summary.latestSavedSummary).toEqual({
+      sessionId,
+      preview: "Dashboard summary preview",
+      updatedAt: "2026-06-08T05:00:00.000Z",
+    });
+    expect(db.workProgressSessionSummary.findMany).toHaveBeenCalledWith({
+      where: {
+        projectId: "proj-1",
+        sessionId: {
+          in: [sessionId],
+        },
+      },
+    });
   });
 });
 

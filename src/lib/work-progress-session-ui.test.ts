@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatSessionDurationMs,
+  formatWorkProgressCleanDirtyLabel,
   formatWorkProgressSessionTitle,
   formatWorkProgressTimestamp,
+  WORK_PROGRESS_DASHBOARD_NO_SNAPSHOTS_LABEL,
   WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL,
   WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL,
 } from "@/lib/work-progress-session-ui";
@@ -29,6 +31,18 @@ describe("work progress session list summary labels", () => {
     expect(WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL).toBe("AI Summary");
     expect(WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL).toBe(
       "No saved AI summary yet.",
+    );
+    expect(WORK_PROGRESS_DASHBOARD_NO_SNAPSHOTS_LABEL).toBe(
+      "No work progress captured yet.",
+    );
+  });
+});
+
+describe("formatWorkProgressCleanDirtyLabel", () => {
+  it("formats clean and dirty working tree labels", () => {
+    expect(formatWorkProgressCleanDirtyLabel(true)).toBe("Clean working tree");
+    expect(formatWorkProgressCleanDirtyLabel(false)).toBe(
+      "Dirty working tree",
     );
   });
 });
