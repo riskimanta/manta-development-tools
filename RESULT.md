@@ -29,21 +29,42 @@ Polished the Work Progress experience with clearer guidance, consistent empty st
 | `pnpm lint` | Pass |
 
 ## Manual verification
-- Not performed yet
-- Recommended steps:
-  1. `pnpm dev`
-  2. Open `/projects/cmpuxei2q0000ul28ztek2rot` — confirm usage guide, capture, terminal hints, dashboard summary, and **View all work progress**
-  3. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress` — confirm search/filter, no-match empty state with **Clear filters**, usage guide
-  4. Open session detail — confirm derived-session notice, AI prompt/summary, back links
-  5. Open `/projects/cmoonw6y80000ulrxz1nevs1p` and its work-progress page — confirm empty states
-  6. Open invalid session URL — confirm safe not-found
+- Pass
+- Verified through ManDev UI
+- Started ManDev with `pnpm dev`
+- Project Detail check passed:
+  `/projects/cmpuxei2q0000ul28ztek2rot`
+  - Work Progress dashboard summary still appears
+  - Capture progress button still appears
+  - terminal/CLI helper copy appears
+  - usage guide/improved help copy appears
+  - Recent snapshots still appear
+  - **View all work progress** link works
+- Sessions page check passed:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
+  - search/filter still works
+  - no-match empty state copy is clear
+  - **Clear filters** works
+  - **View details** links still work
+- Session detail check passed:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
+  - derived-session notice appears if implemented
+  - Copy AI summary prompt still works
+  - AI Summary section still works
+  - back links work
+- Empty project checks passed:
+  - `/projects/cmoonw6y80000ulrxz1nevs1p`
+  - `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress`
+- Invalid session URL check passed:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id`
+  keeps safe not-found behavior
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/23
 - Status: OPEN
 
 ## Git status
-On branch `feat/work-progress-stabilization-polish`, 2 commits ahead of `main` (implementation + result report).
+On branch `feat/work-progress-stabilization-polish`, clean working tree after manual verification commit.
 
 ## Known limitations
 - Polish-only phase; no new major capability
