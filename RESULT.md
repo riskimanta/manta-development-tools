@@ -45,12 +45,19 @@ Added manual saving/editing of AI-generated summaries on the Work Progress Sessi
 - Refreshed again and confirmed updated summary persists
 - Invalid session URL check: Pass — `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id` keeps safe not-found behavior
 
+## Runtime verification note
+- Initial session detail check hit a stale Prisma Client/runtime issue:
+  `db.workProgressSessionSummary` was undefined.
+- Regenerated Prisma Client with `pnpm db:generate`, confirmed migration with `pnpm db:migrate`, restarted dev server, and rechecked the session detail page.
+- Session detail page now loads correctly.
+- Re-verified save, refresh persistence, edit/resave, and invalid session not-found after restart.
+
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/19
 - Status: OPEN
 
 ## Git status
-Clean working tree on `feat/work-progress-session-summary` after commit `fc72b18`.
+Clean working tree on `feat/work-progress-session-summary` before runtime verification docs commit.
 
 ## Known limitations
 - No AI API integration
@@ -59,3 +66,4 @@ Clean working tree on `feat/work-progress-session-summary` after commit `fc72b18
 - Sessions are still derived from snapshots
 - Saved summaries are attached to derived session IDs
 - Derived session IDs may change if future snapshots extend/regroup the session
+- After Prisma schema/migration changes, run `pnpm db:generate` and restart `pnpm dev` so the cached dev Prisma Client picks up new delegates
