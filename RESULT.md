@@ -29,12 +29,24 @@ Added a compact Work Progress dashboard summary to Project Detail so users can q
 | `pnpm lint` | Pass |
 
 ## Manual verification
-- Not performed yet (browser automation could not reach local dev server)
-- Recommended steps:
-  1. `pnpm dev`
-  2. Open `/projects/cmpuxei2q0000ul28ztek2rot`
-  3. Confirm Work Progress card shows Summary (last activity, snapshot/session/summary counts), Latest session, Latest saved AI summary, Capture progress, terminal hint, Recent snapshots, and View all work progress
-  4. Open `/projects/cmoonw6y80000ulrxz1nevs1p` and confirm empty summary copy: **No work progress captured yet.**
+- Pass
+- Verified through ManDev UI
+- Started ManDev with `pnpm dev`
+- Opened Project Detail:
+  `/projects/cmpuxei2q0000ul28ztek2rot`
+- Confirmed Work Progress card shows:
+  - Summary section
+  - last activity
+  - snapshot count
+  - session count
+  - sessions with summaries count
+  - latest session summary
+  - latest saved AI summary preview
+  - Capture progress button
+  - terminal usage hint
+  - Recent snapshots
+  - View all work progress link
+- Empty project check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p` shows `No work progress captured yet.`
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/21
