@@ -32,17 +32,28 @@ Added server-rendered search and filter controls to the Work Progress Sessions p
 | `pnpm lint` | Pass |
 
 ## Manual verification
-- Not performed yet
-- Recommended steps:
-  1. `pnpm dev`
-  2. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
-  3. Confirm filter/search form appears above sessions
-  4. Test search by branch, commit text, changed file path, and saved summary text
-  5. Test branch, clean/dirty, and has/no summary filters
-  6. Confirm result count (`Showing X of Y sessions`)
-  7. Confirm no-match state and Clear filters reset
-  8. Confirm View details links still work
-  9. Open empty project `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` and confirm empty state
+- Pass
+- Verified through ManDev UI
+- Started ManDev with `pnpm dev`
+- Opened sessions page:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
+- Confirmed filter/search form appears above sessions
+- Confirmed search works by:
+  - branch
+  - commit text
+  - changed file path
+  - saved summary text
+- Confirmed filters work:
+  - branch filter
+  - clean/dirty status filter
+  - has-summary/no-summary filter
+  - combined filters
+- Confirmed optional date range filter works with session `startedAt` UTC day behavior
+- Confirmed result count updates, e.g. `Showing X of Y sessions`
+- Confirmed no-match state appears when filters match nothing
+- Confirmed **Clear filters** resets the list
+- Confirmed **View details** links still open the correct session detail pages
+- Empty project check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` still shows safe empty state
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/22
