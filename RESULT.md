@@ -36,11 +36,11 @@ Added a copyable AI summary prompt on the Work Progress Session Detail page. Man
   7. Open an invalid session URL and confirm `notFound()` behavior is unchanged
 
 ## PR
-- URL: `<pending>`
-- Status: NOT CREATED
+- URL: https://github.com/riskimanta/manta-development-tools/pull/18
+- Status: OPEN
 
 ## Git status
-`<pending>`
+On branch `feat/work-progress-ai-summary-prompt`, up to date with `origin/feat/work-progress-ai-summary-prompt`, working tree clean.
 
 ## Known limitations
 - No AI API integration
