@@ -25,15 +25,29 @@ Added a copyable AI summary prompt on the Work Progress Session Detail page. Man
 | `pnpm lint` | Pass |
 
 ## Manual verification
-- Not performed yet
-- Recommended steps:
-  1. `git checkout feat/work-progress-ai-summary-prompt && pnpm dev`
-  2. Open `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
-  3. Confirm **Copy AI summary prompt** appears near the session summary card
-  4. Click the button and paste into a text editor
-  5. Confirm prompt includes project name, branch, session time/duration, snapshot count, commit metadata, changed files, snapshot timeline, and requested AI output sections
-  6. Confirm helper text states ManDev does not call an AI API
-  7. Open an invalid session URL and confirm `notFound()` behavior is unchanged
+- Pass
+- Verified through ManDev UI
+- Started ManDev with `pnpm dev`
+- Opened session detail page:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
+- Confirmed **Copy AI summary prompt** button appears near the session summary card
+- Confirmed helper text states ManDev does not call an AI API
+- Clicked **Copy AI summary prompt**
+- Pasted clipboard content into a text editor
+- Confirmed copied prompt includes:
+  - project name
+  - project local path when available
+  - branch
+  - session started/ended time
+  - duration
+  - snapshot count
+  - first/latest commit
+  - latest commit message
+  - clean/dirty status
+  - changed files list
+  - snapshot timeline
+  - requested AI output sections
+- Invalid session URL check: Pass — `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id` keeps safe not-found behavior
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/18
