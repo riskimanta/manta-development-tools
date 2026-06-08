@@ -1,4 +1,5 @@
 import { WorkProgressAiSummaryPromptActions } from "@/components/projects/work-progress-ai-summary-prompt-actions";
+import { WorkProgressSessionSummaryForm } from "@/components/projects/work-progress-session-summary-form";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/work-progress-session";
 import { formatRelativeTime } from "@/lib/format";
 import type { WorkProgressRecord } from "@/services/work-progress";
+import type { WorkProgressSessionSummaryRecord } from "@/services/work-progress-session-summaries";
 
 const statusCodeClassName =
   "inline-block min-w-[1.75rem] rounded bg-muted px-1 py-0.5 text-center font-mono text-[10px] text-foreground/90";
@@ -98,13 +100,15 @@ function SnapshotTimelineEntry({ snapshot }: { snapshot: WorkProgressRecord }) {
 
 type Props = {
   project: {
+    id: string;
     name: string;
     localPath: string | null;
   };
   session: WorkProgressSession;
+  summary: WorkProgressSessionSummaryRecord | null;
 };
 
-export function WorkProgressSessionDetail({ project, session }: Props) {
+export function WorkProgressSessionDetail({ project, session, summary }: Props) {
   const timelineSnapshots = [...session.snapshots].sort(
     (left, right) =>
       new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -128,7 +132,20 @@ export function WorkProgressSessionDetail({ project, session }: Props) {
             {formatSessionDurationMs(session.durationMs)} · {session.snapshotCount}{" "}
             snapshot{session.snapshotCount === 1 ? "" : "s"}
           </CardDescription>
-          <WorkProgressAiSummaryPromptActions project={project} session={session} />
+        </CardHeader>
+      </Card>
+
+      <WorkProgressAiSummaryPromptActions project={project} session={session} />
+
+      <WorkProgressSessionSummaryForm
+        projectId={project.id}
+        sessionId={session.id}
+        summary={summary}
+      />
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Session metadata</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
           <p>

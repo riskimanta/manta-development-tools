@@ -1,7 +1,7 @@
-# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F)
+# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt)  
-**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, and copyable AI summary prompt
+**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary)  
+**Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, and manual saved AI summaries
 
 ## Overview
 
@@ -78,6 +78,17 @@ Behavior:
 
 ManDev does **not** call any AI API. Summary generation remains manual by pasting the copied prompt into your AI tool of choice.
 
+### Saved AI summary (Phase 5G)
+
+1. Open a session detail page at `/projects/[id]/work-progress/sessions/[sessionId]`.
+2. Click **Copy AI summary prompt** and generate a summary in Cursor, Claude, ChatGPT, or another AI tool.
+3. Paste the generated summary into the **AI Summary** textarea on the same page.
+4. Click **Save summary** to persist it in ManDev.
+
+Saved summaries are stored in `WorkProgressSessionSummary` keyed by `projectId` + derived `sessionId`, with snapshot metadata for reference. ManDev still does **not** call any AI API.
+
+Known limitation: sessions remain derived from snapshots, so a saved summary is attached to the current derived session ID. That ID may change if future snapshots extend or regroup the session.
+
 ## Git capture
 
 | Data | Git command |
@@ -95,6 +106,8 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 
 `WorkProgress` belongs to `Project` (cascade delete). Fields: branch, commit metadata, `changedFilesJson`, `changedFilesCount`, `gitStatusText`, auto-generated `summary`, optional `note`.
 
+`WorkProgressSessionSummary` stores manually saved AI summary text per derived session (`projectId` + `sessionId` unique). Optional metadata: `firstSnapshotId`, `latestSnapshotId`, `branch`, `sessionStartedAt`, `sessionEndedAt`.
+
 ## Implementation map
 
 | Path | Role |
@@ -107,6 +120,9 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/lib/work-progress-session-ui.ts` | Session duration/timestamp formatting |
 | `src/lib/work-progress-ai-summary-prompt.ts` | Structured AI summary prompt builder |
 | `src/services/work-progress.ts` | Persist/list snapshots, cwd capture, sessions |
+| `src/services/work-progress-session-summaries.ts` | Saved session summary get/upsert and detail page data |
+| `src/lib/validations/work-progress-session-summary.ts` | Summary save validation |
+| `src/app/projects/work-progress/session-summaries/actions.ts` | `saveWorkProgressSessionSummaryAction` |
 | `src/app/(app)/projects/[id]/work-progress/page.tsx` | Work Progress sessions page |
 | `src/app/(app)/projects/[id]/work-progress/sessions/[sessionId]/page.tsx` | Session detail page |
 | `src/app/projects/work-progress/actions.ts` | `captureWorkProgressAction` |
@@ -118,6 +134,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 | `src/components/projects/work-progress-session-list.tsx` | Session cards on sessions page |
 | `src/components/projects/work-progress-session-detail.tsx` | Session detail summary and timeline |
 | `src/components/projects/work-progress-ai-summary-prompt-actions.tsx` | Copy AI summary prompt button |
+| `src/components/projects/work-progress-session-summary-form.tsx` | AI Summary save/edit form |
 
 ## Agent API
 
@@ -132,7 +149,7 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 ## Not included
 
 - Background agent daemon, Cursor extension, file watcher
-- Notion integration, SSE/WebSocket, automatic AI summary API
+- Notion integration, SSE/WebSocket, automatic AI summary API, OpenAI/Claude API integration
 - Auto-run tests
 - Remote cloud sync
 
@@ -146,4 +163,5 @@ Changed files are parsed into `{ status, path }` items and stored as JSON in `ch
 - Watch mode is polling-based only; no native filesystem watcher or background daemon
 - Sessions are derived from snapshots; no dedicated `WorkSession` table yet
 - Derived session detail links may change if future snapshots extend or regroup a session
-- No automatic AI-generated session summary; users copy a prompt and paste it into Cursor, Claude, or ChatGPT manually
+- No automatic AI-generated session summary; users copy a prompt, generate externally, and paste the result back into ManDev manually
+- Saved summaries are attached to derived session IDs and may become orphaned if future snapshots extend or regroup the session

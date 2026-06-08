@@ -21,7 +21,7 @@ export default async function WorkProgressSessionDetailPage({ params }: Props) {
     notFound();
   }
 
-  const { project, session } = data;
+  const { project, session, summary } = data;
 
   return (
     <>
@@ -60,7 +60,11 @@ export default async function WorkProgressSessionDetailPage({ params }: Props) {
         }
       />
 
-      <WorkProgressSessionDetail project={project} session={session} />
+      <WorkProgressSessionDetail
+        project={project}
+        session={session}
+        summary={summary}
+      />
     </>
   );
 }

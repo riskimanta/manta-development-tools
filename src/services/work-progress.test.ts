@@ -6,7 +6,6 @@ import {
   captureWorkProgressForCwd,
   captureWorkProgressSnapshot,
   findProjectForWorkProgressCwd,
-  getWorkProgressSessionDetailPageData,
   getWorkProgressSessionsPageData,
   listWorkProgressByProjectId,
   listWorkProgressSessionsByProjectId,
@@ -383,95 +382,6 @@ describe("listWorkProgressSessionsByProjectId", () => {
     const sessions = await listWorkProgressSessionsByProjectId("proj-1");
 
     expect(sessions).toEqual([]);
-  });
-});
-
-describe("getWorkProgressSessionDetailPageData", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("returns project and session for a valid session ID", async () => {
-    vi.mocked(db.project.findUnique).mockResolvedValue({
-      id: "proj-1",
-      name: "ManDev",
-      slug: "mandev",
-      localPath: "/Users/dev/mandev",
-    } as never);
-    vi.mocked(db.workProgress.findMany).mockResolvedValue([mockRow]);
-
-    const data = await getWorkProgressSessionDetailPageData(
-      "proj-1",
-      "session-wp-1-wp-1",
-    );
-
-    expect(data?.project.name).toBe("ManDev");
-    expect(data?.session.id).toBe("session-wp-1-wp-1");
-    expect(data?.session.snapshotCount).toBe(1);
-  });
-
-  it("returns null when session ID is invalid", async () => {
-    vi.mocked(db.project.findUnique).mockResolvedValue({
-      id: "proj-1",
-      name: "ManDev",
-      slug: "mandev",
-      localPath: "/Users/dev/mandev",
-    } as never);
-    vi.mocked(db.workProgress.findMany).mockResolvedValue([mockRow]);
-
-    const data = await getWorkProgressSessionDetailPageData(
-      "proj-1",
-      "session-missing",
-    );
-
-    expect(data).toBeNull();
-  });
-
-  it("returns null when project is missing", async () => {
-    vi.mocked(db.project.findUnique).mockResolvedValue(null);
-
-    const data = await getWorkProgressSessionDetailPageData(
-      "missing",
-      "session-wp-1-wp-1",
-    );
-
-    expect(data).toBeNull();
-  });
-
-  it("returns null when project has no snapshots", async () => {
-    vi.mocked(db.project.findUnique).mockResolvedValue({
-      id: "proj-1",
-      name: "ManDev",
-      slug: "mandev",
-      localPath: "/Users/dev/mandev",
-    } as never);
-    vi.mocked(db.workProgress.findMany).mockResolvedValue([]);
-
-    const data = await getWorkProgressSessionDetailPageData(
-      "proj-1",
-      "session-wp-1-wp-1",
-    );
-
-    expect(data).toBeNull();
-  });
-
-  it("handles invalid changedFilesJson safely", async () => {
-    vi.mocked(db.project.findUnique).mockResolvedValue({
-      id: "proj-1",
-      name: "ManDev",
-      slug: "mandev",
-      localPath: "/Users/dev/mandev",
-    } as never);
-    vi.mocked(db.workProgress.findMany).mockResolvedValue([
-      { ...mockRow, changedFilesJson: "not-json", changedFilesCount: 0 },
-    ]);
-
-    const data = await getWorkProgressSessionDetailPageData(
-      "proj-1",
-      "session-wp-1-wp-1",
-    );
-
-    expect(data?.session.changedFiles).toEqual([]);
   });
 });
 
