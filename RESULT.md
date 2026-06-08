@@ -27,17 +27,24 @@ Added CLI-triggered Work Progress capture through `mandev track`.
 | `pnpm lint` | Pass |
 
 ## Manual verification
-- Not performed yet
-- Recommended manual steps:
-  1. Add `MANDEV_AGENT_TOKEN=dev-local-token` to `.env.local`
-  2. Start ManDev with `pnpm dev`
-  3. Run:
-     ```bash
-     cd /Users/riskimanta/Documents/manta-development-tools
-     MANDEV_AGENT_TOKEN=dev-local-token node ./bin/mandev.mjs track
-     ```
-  4. Confirm CLI prints success
-  5. Open ManDev Project Detail and confirm a new snapshot appears
+- Pass
+- Verified by dogfooding ManDev project itself
+- `.env.local` configured locally with `MANDEV_AGENT_TOKEN=dev-local-token`
+- Started ManDev with `pnpm dev`
+- Ran CLI from ManDev repository:
+  ```bash
+  cd /Users/riskimanta/Documents/manta-development-tools
+  MANDEV_AGENT_TOKEN=dev-local-token node ./bin/mandev.mjs track
+  ```
+- CLI printed success:
+  - project: `ManDev / mandev`
+  - branch: `feat/work-progress-local-agent`
+  - commit: `517ae7d`
+  - changed files: `0`
+  - snapshot: `2026-06-08T04:14:54.623Z`
+- Opened ManDev Project Detail
+- Confirmed a new Work Progress snapshot appeared in Recent snapshots
+- Snapshot displayed branch, latest commit, changed files count/status (`Clean working tree`), and created timestamp (`just now`)
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/14
