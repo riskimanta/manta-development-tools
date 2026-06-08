@@ -16,11 +16,15 @@ import {
   type WorkProgressSession,
 } from "@/lib/work-progress-session";
 import { db } from "@/lib/db";
+import { buildWorkProgressDashboardSummary } from "@/lib/work-progress-dashboard-summary";
+import type { WorkProgressDashboardSummary } from "@/lib/work-progress-dashboard-summary";
 import {
   listWorkProgressSessionSummariesBySessionIds,
   toWorkProgressSessionSavedSummary,
   type WorkProgressSessionSavedSummary,
 } from "@/services/work-progress-session-summaries";
+
+export type { WorkProgressDashboardSummary } from "@/lib/work-progress-dashboard-summary";
 
 export type WorkProgressRecord = {
   id: string;
@@ -357,6 +361,19 @@ export async function listWorkProgressSessionsByProjectId(
 ): Promise<WorkProgressSession[]> {
   const entries = await listWorkProgressEntriesByProjectId(projectId, limit);
   return groupWorkProgressIntoSessions(entries);
+}
+
+export async function getWorkProgressDashboardSummaryByProjectId(
+  projectId: string,
+): Promise<WorkProgressDashboardSummary> {
+  const entries = await listWorkProgressEntriesByProjectId(projectId);
+  const sessions = groupWorkProgressIntoSessions(entries);
+  const summaryRows = await listWorkProgressSessionSummariesBySessionIds(
+    projectId,
+    sessions.map((session) => session.id),
+  );
+
+  return buildWorkProgressDashboardSummary(entries, summaryRows);
 }
 
 export async function getWorkProgressSessionsPageData(
