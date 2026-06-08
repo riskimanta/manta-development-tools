@@ -37,11 +37,11 @@ Added saved AI summary previews to the Work Progress Sessions page so users can 
   5. Open `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` and confirm the empty state still works
 
 ## PR
-- URL: `<pending>`
-- Status: NOT CREATED
+- URL: https://github.com/riskimanta/manta-development-tools/pull/20
+- Status: OPEN
 
 ## Git status
-`<pending>`
+On branch `feat/work-progress-summary-preview`, up to date with `origin/feat/work-progress-summary-preview`, working tree clean
 
 ## Known limitations
 - No AI API integration
