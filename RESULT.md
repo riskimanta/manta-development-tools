@@ -27,15 +27,25 @@ Added a project-level Work Progress Session View that groups existing WorkProgre
 | `pnpm lint` | Pass |
 
 ## Manual verification
-- Not performed yet
-- Recommended manual steps:
-  1. Start ManDev with `pnpm dev`
-  2. Open ManDev Project Detail
-  3. Confirm Work Progress card still works and shows **View all work progress**
-  4. Open `/projects/[id]/work-progress`
-  5. Confirm sessions are displayed from existing snapshots
-  6. Confirm each session shows branch, started/ended time, duration, snapshot count, latest commit, changed files count, and clean/dirty status
-  7. Confirm empty state on a project with no snapshots if practical
+- Pass
+- Verified through ManDev UI
+- Started ManDev with `pnpm dev`
+- Opened ManDev Project Detail
+- Confirmed Work Progress card still renders
+- Confirmed Capture progress button and Recent snapshots remain visible
+- Confirmed `View all work progress` / sessions link appears
+- Opened `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
+- Confirmed existing WorkProgress snapshots are grouped into sessions (4 snapshots → 3 sessions)
+- Confirmed session cards display:
+  - branch
+  - started/ended time
+  - duration
+  - snapshot count
+  - latest commit hash/message
+  - changed files count
+  - clean/dirty status
+  - changed files/snapshot preview
+- Empty state check: Pass — `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` shows clear empty state for Expenses Tracker v3
 
 ## PR
 - URL: https://github.com/riskimanta/manta-development-tools/pull/16
