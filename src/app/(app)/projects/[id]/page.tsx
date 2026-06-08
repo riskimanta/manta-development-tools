@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { getProjectArchitecture } from "@/services/architectures";
 import { getProjectById } from "@/services/projects";
 import { listRunProfilesWithRecentRunsByProjectId } from "@/services/run-profiles";
+import { getLatestWorkProgressSession } from "@/lib/work-progress-session";
 import { listWorkProgressByProjectId } from "@/services/work-progress";
 
 type Props = { params: Promise<{ id: string }> };
@@ -38,6 +39,7 @@ export default async function ProjectDetailPage({ params }: Props) {
     repoUrl: project.repoUrl,
     localPath: project.localPath,
   });
+  const latestSession = getLatestWorkProgressSession(workProgressEntries);
 
   return (
     <>
@@ -87,6 +89,7 @@ export default async function ProjectDetailPage({ params }: Props) {
             projectId={project.id}
             localPath={project.localPath}
             entries={workProgressEntries}
+            latestSession={latestSession}
           />
           <ProjectRunProfilesCard
             projectId={project.id}
