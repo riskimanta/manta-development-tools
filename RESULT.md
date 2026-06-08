@@ -38,11 +38,11 @@ Added a detail page for derived Work Progress sessions, showing session summary,
   7. Open work progress for empty project `cmoonw6y80000ulrxz1nevs1p` and confirm empty state
 
 ## PR
-- URL: `<pending>`
-- Status: NOT CREATED
+- URL: https://github.com/riskimanta/manta-development-tools/pull/17
+- Status: OPEN
 
 ## Git status
-Clean working tree on `feat/work-progress-session-detail` after feature commit `794072f`.
+On branch `feat/work-progress-session-detail`, up to date with `origin/feat/work-progress-session-detail`. Feature commit `794072f`, docs commit `07abf90`.
 
 ## Known limitations
 - Sessions are derived from snapshots, not persisted as a dedicated table
