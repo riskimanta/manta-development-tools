@@ -7,7 +7,7 @@ Added a project-level Work Progress Session View that groups existing WorkProgre
 `feat/work-progress-session-view`
 
 ## Commit
-`<pending>` — feat: add work progress session view
+`3d19d7e` — feat: add work progress session view
 
 ## Delivered
 - Added derived Work Progress session grouping
@@ -38,11 +38,11 @@ Added a project-level Work Progress Session View that groups existing WorkProgre
   7. Confirm empty state on a project with no snapshots if practical
 
 ## PR
-- URL: `<pending>`
-- Status: `<pending>`
+- URL: https://github.com/riskimanta/manta-development-tools/pull/16
+- Status: OPEN
 
 ## Git status
-`<pending>`
+On branch `feat/work-progress-session-view`, up to date with `origin/feat/work-progress-session-view`. Working tree clean.
 
 ## Known limitations
 - Sessions are derived from snapshots, not persisted as a dedicated table
