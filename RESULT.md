@@ -1,17 +1,18 @@
-# Phase 5G — Save AI Summary Back to ManDev
+# Phase 5G — Save AI Summary Back to ManDev: MERGED
 
 ## Summary
-Added manual saving/editing of AI-generated summaries on the Work Progress Session Detail page. Users can copy an AI prompt, generate a summary externally, paste it back into ManDev, and persist it for the derived session.
+Phase 5G added manual saving/editing of AI-generated summaries on the Work Progress Session Detail page. Users can copy an AI prompt, generate a summary externally, paste it back into ManDev, and persist it for the derived session.
 
-## Branch
-`feat/work-progress-session-summary`
-
-## Commit
-`d4016b5` — `feat: save work progress session summaries`
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/19
+- Status: MERGED
+- Merge commit: `c156b76`
+- Feature branch: `feat/work-progress-session-summary`
+- Latest feature branch commit before merge: `bea3e49`
 
 ## Delivered
 - Added `WorkProgressSessionSummary` Prisma model
-- Added migration for saved session summaries
+- Added migration `20260608120049_add_work_progress_session_summary`
 - Added service/action support for saving and updating session summaries
 - Added AI Summary section on session detail page
 - Added textarea + Save summary flow
@@ -19,14 +20,6 @@ Added manual saving/editing of AI-generated summaries on the Work Progress Sessi
 - Preserved Copy AI summary prompt behavior
 - Added tests
 - Updated docs
-
-## Validation
-| Check | Result |
-|-------|--------|
-| `pnpm test` | Pass — 511 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
-| `pnpm db:migrate` | Pass — `20260608120049_add_work_progress_session_summary` applied |
 
 ## Manual verification
 - Pass
@@ -43,21 +36,31 @@ Added manual saving/editing of AI-generated summaries on the Work Progress Sessi
 - Refreshed page and confirmed saved summary persists
 - Edited the summary and saved again
 - Refreshed again and confirmed updated summary persists
-- Invalid session URL check: Pass — `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id` keeps safe not-found behavior
+- Invalid session URL check passed:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id`
+  keeps safe not-found behavior
 
 ## Runtime verification note
 - Initial session detail check hit a stale Prisma Client/runtime issue:
   `db.workProgressSessionSummary` was undefined.
 - Regenerated Prisma Client with `pnpm db:generate`, confirmed migration with `pnpm db:migrate`, restarted dev server, and rechecked the session detail page.
-- Session detail page now loads correctly.
+- Session detail page then loaded correctly.
 - Re-verified save, refresh persistence, edit/resave, and invalid session not-found after restart.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/19
-- Status: OPEN
+## Validation on main
+| Check | Result |
+|-------|--------|
+| `pnpm db:generate` | Pass |
+| `pnpm db:migrate` | Pass — `20260608120049_add_work_progress_session_summary` already applied |
+| `pnpm test` | Pass — 511 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
-## Git status
-Clean working tree on `feat/work-progress-session-summary` after commit `24bae89`.
+## Cleanup
+- Local `main` synced with `origin/main`
+- Feature branch deleted locally: yes (already absent after `gh pr merge`)
+- Remote feature branch deleted/pruned: yes
+- Working tree clean: yes (before `RESULT.md` merge commit)
 
 ## Known limitations
 - No AI API integration
@@ -67,3 +70,6 @@ Clean working tree on `feat/work-progress-session-summary` after commit `24bae89
 - Saved summaries are attached to derived session IDs
 - Derived session IDs may change if future snapshots extend/regroup the session
 - After Prisma schema/migration changes, run `pnpm db:generate` and restart `pnpm dev` so the cached dev Prisma Client picks up new delegates
+
+## Final git status
+On branch `main`, up to date with `origin/main`, working tree clean after merge docs commit.
