@@ -1,13 +1,14 @@
-# Phase 5F — Work Progress AI Summary Prompt
+# Phase 5F — Work Progress AI Summary Prompt: MERGED
 
 ## Summary
-Added a copyable AI summary prompt on the Work Progress Session Detail page. ManDev builds a structured prompt from session data for manual use in Cursor, Claude, or ChatGPT without calling an AI API.
+Phase 5F added a copyable AI summary prompt on the Work Progress Session Detail page. ManDev builds a structured prompt from session data for manual use in Cursor, Claude, or ChatGPT without calling an AI API.
 
-## Branch
-`feat/work-progress-ai-summary-prompt`
-
-## Commit
-`e5a6783` — `feat: add work progress ai summary prompt`
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/18
+- Status: MERGED
+- Merge commit: `2e591be`
+- Feature branch: `feat/work-progress-ai-summary-prompt`
+- Latest feature branch commit before merge: `1a0b7cc`
 
 ## Delivered
 - Added Work Progress AI summary prompt builder
@@ -16,13 +17,6 @@ Added a copyable AI summary prompt on the Work Progress Session Detail page. Man
 - Added UI copy explaining no AI API is called
 - Added tests
 - Updated docs
-
-## Validation
-| Check | Result |
-|-------|--------|
-| `pnpm test` | Pass — 497 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
 
 ## Manual verification
 - Pass
@@ -47,14 +41,22 @@ Added a copyable AI summary prompt on the Work Progress Session Detail page. Man
   - changed files list
   - snapshot timeline
   - requested AI output sections
-- Invalid session URL check: Pass — `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id` keeps safe not-found behavior
+- Invalid session URL check passed:
+  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id`
+  keeps safe not-found behavior
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/18
-- Status: OPEN
+## Validation on main
+| Check | Result |
+|-------|--------|
+| `pnpm test` | Pass — 497 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
-## Git status
-On branch `feat/work-progress-ai-summary-prompt`, up to date with `origin/feat/work-progress-ai-summary-prompt`, working tree clean.
+## Cleanup
+- Local `main` synced with `origin/main`
+- Feature branch deleted locally: yes (already removed during merge)
+- Remote feature branch deleted/pruned: yes
+- Working tree clean: yes
 
 ## Known limitations
 - No AI API integration
@@ -62,3 +64,6 @@ On branch `feat/work-progress-ai-summary-prompt`, up to date with `origin/feat/w
 - No persisted summary field
 - User must paste the prompt manually into Cursor, Claude, ChatGPT, or another AI tool
 - Sessions are still derived from snapshots
+
+## Final git status
+On branch `main`, up to date with `origin/main`, working tree clean.
