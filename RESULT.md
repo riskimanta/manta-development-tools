@@ -39,11 +39,11 @@ Polished the Work Progress experience with clearer guidance, consistent empty st
   6. Open invalid session URL — confirm safe not-found
 
 ## PR
-- URL: TBD
-- Status: NOT CREATED
+- URL: https://github.com/riskimanta/manta-development-tools/pull/23
+- Status: OPEN
 
 ## Git status
-On branch `feat/work-progress-stabilization-polish`, 1 commit ahead of `main`; `RESULT.md` updated locally after commit.
+On branch `feat/work-progress-stabilization-polish`, 2 commits ahead of `main` (implementation + result report).
 
 ## Known limitations
 - Polish-only phase; no new major capability
