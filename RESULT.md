@@ -45,11 +45,11 @@ Added server-rendered search and filter controls to the Work Progress Sessions p
   9. Open empty project `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress` and confirm empty state
 
 ## PR
-- URL: pending
-- Status: NOT CREATED
+- URL: https://github.com/riskimanta/manta-development-tools/pull/22
+- Status: OPEN
 
 ## Git status
-On branch `feat/work-progress-search-filter` with implementation committed.
+On branch `feat/work-progress-search-filter`, up to date with `origin/feat/work-progress-search-filter`, working tree clean.
 
 ## Known limitations
 - Search/filter applies to derived sessions, not a full-text search index
