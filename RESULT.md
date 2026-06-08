@@ -1,69 +1,69 @@
-# Phase 5F — Work Progress AI Summary Prompt: MERGED
+# Phase 5G — Save AI Summary Back to ManDev
 
 ## Summary
-Phase 5F added a copyable AI summary prompt on the Work Progress Session Detail page. ManDev builds a structured prompt from session data for manual use in Cursor, Claude, or ChatGPT without calling an AI API.
+Added manual saving/editing of AI-generated summaries on the Work Progress Session Detail page. Users can copy an AI prompt, generate a summary externally, paste it back into ManDev, and persist it for the derived session.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/18
-- Status: MERGED
-- Merge commit: `2e591be`
-- Feature branch: `feat/work-progress-ai-summary-prompt`
-- Latest feature branch commit before merge: `1a0b7cc`
+## Branch
+`feat/work-progress-session-summary`
+
+## Commit
+`d4016b5` — `feat: save work progress session summaries`
 
 ## Delivered
-- Added Work Progress AI summary prompt builder
-- Added Copy AI summary prompt button on session detail page
-- Included project/session metadata, changed files, and snapshot timeline in copied prompt
-- Added UI copy explaining no AI API is called
+- Added `WorkProgressSessionSummary` Prisma model
+- Added migration for saved session summaries
+- Added service/action support for saving and updating session summaries
+- Added AI Summary section on session detail page
+- Added textarea + Save summary flow
+- Added saved summary display
+- Preserved Copy AI summary prompt behavior
 - Added tests
 - Updated docs
+
+## Validation
+| Check | Result |
+|-------|--------|
+| `pnpm test` | Pass — 511 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
+| `pnpm db:migrate` | Pass — `20260608120049_add_work_progress_session_summary` applied |
 
 ## Manual verification
 - Pass
 - Verified through ManDev UI
+- Ran `pnpm db:migrate`
 - Started ManDev with `pnpm dev`
 - Opened session detail page:
   `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
-- Confirmed **Copy AI summary prompt** button appears near the session summary card
-- Confirmed helper text states ManDev does not call an AI API
-- Clicked **Copy AI summary prompt**
-- Pasted clipboard content into a text editor
-- Confirmed copied prompt includes:
-  - project name
-  - project local path when available
-  - branch
-  - session started/ended time
-  - duration
-  - snapshot count
-  - first/latest commit
-  - latest commit message
-  - clean/dirty status
-  - changed files list
-  - snapshot timeline
-  - requested AI output sections
-- Invalid session URL check passed:
-  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id`
-  keeps safe not-found behavior
+- Confirmed existing **Copy AI summary prompt** button still appears
+- Confirmed new **AI Summary** section appears
+- Pasted sample AI summary text into the textarea
+- Clicked **Save summary**
+- Confirmed saved summary appears on the page
+- Refreshed page and confirmed saved summary persists
+- Edited the summary and saved again
+- Refreshed again and confirmed updated summary persists
+- Invalid session URL check: Pass — `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/invalid-session-id` keeps safe not-found behavior
 
-## Validation on main
-| Check | Result |
-|-------|--------|
-| `pnpm test` | Pass — 497 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
+## Runtime verification note
+- Initial session detail check hit a stale Prisma Client/runtime issue:
+  `db.workProgressSessionSummary` was undefined.
+- Regenerated Prisma Client with `pnpm db:generate`, confirmed migration with `pnpm db:migrate`, restarted dev server, and rechecked the session detail page.
+- Session detail page now loads correctly.
+- Re-verified save, refresh persistence, edit/resave, and invalid session not-found after restart.
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Feature branch deleted locally: yes (already removed during merge)
-- Remote feature branch deleted/pruned: yes
-- Working tree clean: yes
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/19
+- Status: OPEN
+
+## Git status
+Clean working tree on `feat/work-progress-session-summary` after commit `24bae89`.
 
 ## Known limitations
 - No AI API integration
 - No automatic AI-generated summary
-- No persisted summary field
-- User must paste the prompt manually into Cursor, Claude, ChatGPT, or another AI tool
+- User must generate summary externally and paste it manually
 - Sessions are still derived from snapshots
-
-## Final git status
-On branch `main`, up to date with `origin/main`, working tree clean.
+- Saved summaries are attached to derived session IDs
+- Derived session IDs may change if future snapshots extend/regroup the session
+- After Prisma schema/migration changes, run `pnpm db:generate` and restart `pnpm dev` so the cached dev Prisma Client picks up new delegates
