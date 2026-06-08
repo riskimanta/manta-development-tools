@@ -1,68 +1,53 @@
-# Phase 5H — Saved AI Summary Preview in Sessions List: MERGED
+# Phase 5I — Work Progress Dashboard Summary
 
 ## Summary
-Phase 5H added saved AI summary previews to the Work Progress Sessions page so users can quickly scan which derived sessions already have saved summaries.
+Added a compact Work Progress dashboard summary to Project Detail so users can quickly see latest activity, snapshot/session counts, latest session, and latest saved AI summary preview.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/20
-- Status: MERGED
-- Merge commit: `04dee4c`
-- Feature branch: `feat/work-progress-summary-preview`
-- Latest feature branch commit before merge: `a53a23d`
+## Branch
+`feat/work-progress-dashboard-summary`
+
+## Commit
+`9527ec3` — `feat: add work progress dashboard summary`
 
 ## Delivered
-- Added saved summary data to Work Progress session list loading
-- Added summary preview helper
-- Added AI Summary preview display on session cards
-- Added no-summary empty state on session cards
-- Preserved View details link for full summary editing
+- Added Work Progress dashboard summary data loading
+- Added snapshot/session/summary counts
+- Added latest activity metadata
+- Added latest session summary on Project Detail
+- Added latest saved AI summary preview on Project Detail
+- Preserved existing Capture progress, terminal usage hint, Recent snapshots, and View sessions link
 - Added tests
 - Updated docs
 
-## Manual verification
-- Pass
-- Verified through ManDev UI
-- Ran `pnpm db:generate`
-- Ran `pnpm db:migrate`
-- Restarted ManDev with `pnpm dev`
-- Opened session detail page:
-  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress/sessions/session-cmq4u77810001ullrd1l0pqh8-cmq4u99qx0003ullrdt3e1lks`
-- Confirmed saved summary still exists on the detail page
-- Opened sessions list:
-  `/projects/cmpuxei2q0000ul28ztek2rot/work-progress`
-- Confirmed matching session card shows:
-  - **AI Summary** label
-  - summary preview text
-  - updated timestamp
-  - **View details** link
-- Confirmed **View details** opens the correct session detail page
-- Confirmed sessions without saved summary show **No saved AI summary yet.**
-- Empty project check passed:
-  `/projects/cmoonw6y80000ulrxz1nevs1p/work-progress`
-  still shows safe empty state
-
-## Validation on main
+## Validation
 | Check | Result |
 |-------|--------|
 | `pnpm db:generate` | Pass |
 | `pnpm db:migrate` | Pass — migration already applied |
-| `pnpm test` | Pass — 526 tests |
+| `pnpm test` | Pass — 541 tests |
 | `pnpm typecheck` | Pass |
 | `pnpm lint` | Pass |
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Feature branch deleted locally: yes
-- Remote feature branch deleted/pruned: yes
-- Working tree clean: yes
+## Manual verification
+- Not performed yet (browser automation could not reach local dev server)
+- Recommended steps:
+  1. `pnpm dev`
+  2. Open `/projects/cmpuxei2q0000ul28ztek2rot`
+  3. Confirm Work Progress card shows Summary (last activity, snapshot/session/summary counts), Latest session, Latest saved AI summary, Capture progress, terminal hint, Recent snapshots, and View all work progress
+  4. Open `/projects/cmoonw6y80000ulrxz1nevs1p` and confirm empty summary copy: **No work progress captured yet.**
+
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/21
+- Status: OPEN
+
+## Git status
+On branch `feat/work-progress-dashboard-summary`, up to date with `origin/feat/work-progress-dashboard-summary`. Working tree clean after implementation commit.
 
 ## Known limitations
+- Dashboard summary is derived from existing snapshots and saved summaries
 - No AI API integration
 - No automatic AI-generated summary
 - Summary editing still happens on session detail page
 - Sessions are still derived from snapshots
 - Saved summaries are attached to derived session IDs
 - Derived session IDs may change if future snapshots extend/regroup the session
-
-## Final git status
-On branch `main`, up to date with `origin/main`, working tree clean
