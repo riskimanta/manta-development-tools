@@ -12,8 +12,10 @@ import {
 import {
   formatSessionDurationMs,
   formatWorkProgressTimestamp,
+  WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL,
+  WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL,
 } from "@/lib/work-progress-session-ui";
-import type { WorkProgressSession } from "@/lib/work-progress-session";
+import type { WorkProgressSessionListItem } from "@/services/work-progress";
 import { formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +27,7 @@ const SESSION_SNAPSHOT_PREVIEW_LIMIT = 3;
 function SessionSnapshotPreview({
   session,
 }: {
-  session: WorkProgressSession;
+  session: WorkProgressSessionListItem;
 }) {
   const previewSnapshots = session.snapshots.slice(-SESSION_SNAPSHOT_PREVIEW_LIMIT);
 
@@ -56,12 +58,38 @@ function SessionSnapshotPreview({
   );
 }
 
+function SessionSavedSummaryPreview({
+  session,
+}: {
+  session: WorkProgressSessionListItem;
+}) {
+  if (session.savedSummary) {
+    return (
+      <div className="rounded border border-border/40 bg-muted/20 px-3 py-2 text-xs">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/90">
+          {WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL}
+        </p>
+        <p className="mt-1 text-foreground/85">{session.savedSummary.preview}</p>
+        <p className="mt-1 text-muted-foreground">
+          Updated {formatWorkProgressTimestamp(session.savedSummary.updatedAt)}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <p className="text-xs text-muted-foreground">
+      {WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL}
+    </p>
+  );
+}
+
 function WorkProgressSessionCard({
   projectId,
   session,
 }: {
   projectId: string;
-  session: WorkProgressSession;
+  session: WorkProgressSessionListItem;
 }) {
   return (
     <Card>
@@ -120,6 +148,8 @@ function WorkProgressSessionCard({
 
         <SessionSnapshotPreview session={session} />
 
+        <SessionSavedSummaryPreview session={session} />
+
         <Link
           href={`/projects/${projectId}/work-progress/sessions/${session.id}`}
           className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
@@ -133,7 +163,7 @@ function WorkProgressSessionCard({
 
 type Props = {
   projectId: string;
-  sessions: WorkProgressSession[];
+  sessions: WorkProgressSessionListItem[];
   className?: string;
 };
 

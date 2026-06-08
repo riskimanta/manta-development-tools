@@ -24,6 +24,11 @@ export function formatWorkProgressSessionTitle(branch: string | null): string {
   return branch ? `Work session on ${branch}` : "Work session";
 }
 
+export const WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL = "AI Summary";
+
+export const WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL =
+  "No saved AI summary yet.";
+
 export function formatWorkProgressTimestamp(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {

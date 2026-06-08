@@ -1,6 +1,7 @@
 import type { WorkProgressSessionSummary } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { buildWorkProgressSessionSummaryPreview } from "@/lib/work-progress-session-summary-preview";
 import {
   findWorkProgressSessionById,
   groupWorkProgressIntoSessions,
@@ -30,6 +31,13 @@ export type WorkProgressSessionSummaryRecord = {
   sessionStartedAt: string | null;
   sessionEndedAt: string | null;
   createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkProgressSessionSavedSummary = {
+  id: string;
+  summaryMarkdown: string;
+  preview: string;
   updatedAt: string;
 };
 
@@ -66,6 +74,42 @@ function toWorkProgressSessionSummaryRecord(
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+export function toWorkProgressSessionSavedSummary(
+  record: WorkProgressSessionSummaryRecord,
+): WorkProgressSessionSavedSummary | null {
+  const trimmed = record.summaryMarkdown.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return {
+    id: record.id,
+    summaryMarkdown: record.summaryMarkdown,
+    preview: buildWorkProgressSessionSummaryPreview(trimmed),
+    updatedAt: record.updatedAt,
+  };
+}
+
+export async function listWorkProgressSessionSummariesBySessionIds(
+  projectId: string,
+  sessionIds: string[],
+): Promise<WorkProgressSessionSummaryRecord[]> {
+  if (sessionIds.length === 0) {
+    return [];
+  }
+
+  const rows = await db.workProgressSessionSummary.findMany({
+    where: {
+      projectId,
+      sessionId: {
+        in: sessionIds,
+      },
+    },
+  });
+
+  return rows.map(toWorkProgressSessionSummaryRecord);
 }
 
 export async function getWorkProgressSessionSummary(

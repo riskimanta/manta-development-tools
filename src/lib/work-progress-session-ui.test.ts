@@ -4,6 +4,8 @@ import {
   formatSessionDurationMs,
   formatWorkProgressSessionTitle,
   formatWorkProgressTimestamp,
+  WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL,
+  WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL,
 } from "@/lib/work-progress-session-ui";
 
 describe("formatSessionDurationMs", () => {
@@ -19,6 +21,15 @@ describe("formatWorkProgressSessionTitle", () => {
   it("formats branch-based session title", () => {
     expect(formatWorkProgressSessionTitle("main")).toBe("Work session on main");
     expect(formatWorkProgressSessionTitle(null)).toBe("Work session");
+  });
+});
+
+describe("work progress session list summary labels", () => {
+  it("exposes display labels for saved and missing summaries", () => {
+    expect(WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL).toBe("AI Summary");
+    expect(WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL).toBe(
+      "No saved AI summary yet.",
+    );
   });
 });
 

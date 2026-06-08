@@ -24,6 +24,9 @@ vi.mock("@/lib/db", () => ({
       findMany: vi.fn(),
       findFirst: vi.fn(),
     },
+    workProgressSessionSummary: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -386,8 +389,25 @@ describe("listWorkProgressSessionsByProjectId", () => {
 });
 
 describe("getWorkProgressSessionsPageData", () => {
+  const sessionId = "session-wp-1-wp-1";
+
+  const mockSummaryRow = {
+    id: "summary-1",
+    projectId: "proj-1",
+    sessionId,
+    summaryMarkdown: "Implemented and verified Work Progress session summary save flow.",
+    firstSnapshotId: "wp-1",
+    latestSnapshotId: "wp-1",
+    branch: "main",
+    sessionStartedAt: new Date("2026-06-07T04:00:00.000Z"),
+    sessionEndedAt: new Date("2026-06-07T04:00:00.000Z"),
+    createdAt: new Date("2026-06-08T04:00:00.000Z"),
+    updatedAt: new Date("2026-06-08T05:00:00.000Z"),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(db.workProgressSessionSummary.findMany).mockResolvedValue([]);
   });
 
   it("returns null when project is missing", async () => {
@@ -412,5 +432,130 @@ describe("getWorkProgressSessionsPageData", () => {
     expect(data?.project.name).toBe("ManDev");
     expect(data?.entryCount).toBe(1);
     expect(data?.sessions).toHaveLength(1);
+    expect(data?.sessions[0]?.savedSummary).toBeNull();
+  });
+
+  it("includes saved summary preview when summary exists", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    } as never);
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([mockRow]);
+    vi.mocked(db.workProgressSessionSummary.findMany).mockResolvedValue([
+      mockSummaryRow,
+    ]);
+
+    const data = await getWorkProgressSessionsPageData("proj-1");
+
+    expect(data?.sessions[0]?.savedSummary).toEqual({
+      id: "summary-1",
+      summaryMarkdown:
+        "Implemented and verified Work Progress session summary save flow.",
+      preview:
+        "Implemented and verified Work Progress session summary save flow.",
+      updatedAt: "2026-06-08T05:00:00.000Z",
+    });
+    expect(db.workProgressSessionSummary.findMany).toHaveBeenCalledWith({
+      where: {
+        projectId: "proj-1",
+        sessionId: {
+          in: [sessionId],
+        },
+      },
+    });
+  });
+
+  it("matches multiple summaries to the correct session IDs", async () => {
+    const olderSnapshot = {
+      ...mockRow,
+      id: "wp-0",
+      createdAt: new Date("2026-06-06T04:00:00.000Z"),
+    };
+    const newerSnapshot = {
+      ...mockRow,
+      id: "wp-2",
+      createdAt: new Date("2026-06-08T04:00:00.000Z"),
+    };
+    const olderSessionId = "session-wp-0-wp-0";
+    const newerSessionId = "session-wp-2-wp-2";
+
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    } as never);
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([
+      newerSnapshot,
+      mockRow,
+      olderSnapshot,
+    ]);
+    vi.mocked(db.workProgressSessionSummary.findMany).mockResolvedValue([
+      {
+        ...mockSummaryRow,
+        id: "summary-old",
+        sessionId: olderSessionId,
+        summaryMarkdown: "Older session summary",
+      },
+      {
+        ...mockSummaryRow,
+        id: "summary-new",
+        sessionId: newerSessionId,
+        summaryMarkdown: "Newer session summary",
+      },
+    ]);
+
+    const data = await getWorkProgressSessionsPageData("proj-1");
+
+    expect(data?.sessions).toHaveLength(3);
+    expect(
+      data?.sessions.find((session) => session.id === olderSessionId)?.savedSummary
+        ?.preview,
+    ).toBe("Older session summary");
+    expect(
+      data?.sessions.find((session) => session.id === newerSessionId)?.savedSummary
+        ?.preview,
+    ).toBe("Newer session summary");
+    expect(
+      data?.sessions.find((session) => session.id === sessionId)?.savedSummary,
+    ).toBeNull();
+  });
+
+  it("works when project has no saved summaries", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    } as never);
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([mockRow]);
+    vi.mocked(db.workProgressSessionSummary.findMany).mockResolvedValue([]);
+
+    const data = await getWorkProgressSessionsPageData("proj-1");
+
+    expect(data?.sessions[0]?.savedSummary).toBeNull();
+    expect(db.workProgressSessionSummary.findMany).toHaveBeenCalled();
+  });
+
+  it("treats empty saved summary as null without crashing", async () => {
+    vi.mocked(db.project.findUnique).mockResolvedValue({
+      id: "proj-1",
+      name: "ManDev",
+      slug: "mandev",
+      localPath: "/Users/dev/mandev",
+    } as never);
+    vi.mocked(db.workProgress.findMany).mockResolvedValue([mockRow]);
+    vi.mocked(db.workProgressSessionSummary.findMany).mockResolvedValue([
+      {
+        ...mockSummaryRow,
+        summaryMarkdown: "   \n  ",
+      },
+    ]);
+
+    const data = await getWorkProgressSessionsPageData("proj-1");
+
+    expect(data?.sessions[0]?.savedSummary).toBeNull();
   });
 });
