@@ -1,13 +1,14 @@
-# Phase 5C — Work Progress Watch Mode
+# Phase 5C — Work Progress Watch Mode: MERGED
 
 ## Summary
-Added polling-based watch mode for Work Progress capture through `mandev track --watch`.
+Phase 5C added polling-based watch mode for Work Progress capture through `mandev track --watch`. Watch mode periodically captures Git-visible project progress and skips duplicate unchanged snapshots.
 
-## Branch
-`feat/work-progress-watch-mode`
-
-## Commit
-`d7b0fa1` — feat: add work progress watch mode
+## PR
+- URL: https://github.com/riskimanta/manta-development-tools/pull/15
+- Status: MERGED
+- Merge commit: `2006dcf`
+- Feature branch: `feat/work-progress-watch-mode`
+- Latest feature branch commit before merge: `cb7c058`
 
 ## Delivered
 - Added `mandev track --watch`
@@ -19,13 +20,6 @@ Added polling-based watch mode for Work Progress capture through `mandev track -
 - Updated Work Progress card terminal usage hint
 - Added tests
 - Updated docs
-
-## Validation
-| Check | Result |
-|-------|--------|
-| `pnpm test` | Pass — 463 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
 
 ## Manual verification
 - Pass
@@ -47,12 +41,18 @@ Added polling-based watch mode for Work Progress capture through `mandev track -
 - A Git-visible working tree change created a new snapshot on the next interval
 - Ctrl+C stopped watch mode cleanly
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/15
-- Status: OPEN
+## Validation on main
+| Check | Result |
+|-------|--------|
+| `pnpm test` | Pass — 463 tests |
+| `pnpm typecheck` | Pass |
+| `pnpm lint` | Pass |
 
-## Git status
-On branch `feat/work-progress-watch-mode`, up to date with `origin/feat/work-progress-watch-mode`. Working tree clean.
+## Cleanup
+- Local `main` synced with `origin/main`
+- Feature branch deleted locally: yes (already removed during merge)
+- Remote feature branch deleted/pruned: yes
+- Working tree clean: yes
 
 ## Known limitations
 - Polling-based only
@@ -65,3 +65,5 @@ On branch `feat/work-progress-watch-mode`, up to date with `origin/feat/work-pro
 - Requires registered project `localPath`
 - Watch mode only observes Git-visible state
 
+## Final git status
+On branch `main`, up to date with `origin/main`. Working tree clean.
