@@ -1,6 +1,6 @@
-# Work Progress Snapshot (Phase 5A + 5B + 5C + 5D + 5E + 5F + 5G + 5H + 5I + 5J + 5K)
+# Work Progress Snapshot (Phase 5 — complete)
 
-**Status:** Implemented (Phase 5A UI + Phase 5B CLI + Phase 5C watch mode + Phase 5D session view + Phase 5E session detail + Phase 5F AI summary prompt + Phase 5G saved AI summary + Phase 5H sessions list summary preview + Phase 5I Project Detail dashboard summary + Phase 5J sessions list search/filter + Phase 5K stabilization and UX polish)  
+**Status:** Implemented (Phase 5A–5K feature delivery; Phase 5L closure docs). See [work-progress-phase-5-closure.md](./work-progress-phase-5-closure.md) for milestone summary, limitations, and Phase 6 roadmap.  
 **Scope:** Manual Git snapshot capture on Project Detail, local CLI, polling watch mode, derived session view, session detail page, copyable AI summary prompt, manual saved AI summaries, saved summary previews on the sessions list, a compact Work Progress dashboard summary on Project Detail, server-rendered search/filter on the Work Progress sessions page, and UX polish for guidance, empty states, and derived-session messaging
 
 ## Overview
