@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { WorkProgressSessionFilters } from "@/components/projects/work-progress-session-filters";
 import { WorkProgressSessionList } from "@/components/projects/work-progress-session-list";
+import { WorkProgressUsageGuide } from "@/components/projects/work-progress-usage-guide";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +13,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatWorkProgressSessionFilterCountLabel } from "@/lib/work-progress-session-filter";
+import {
+  buildWorkProgressSessionsListHref,
+  formatWorkProgressSessionFilterCountLabel,
+} from "@/lib/work-progress-session-filter";
+import {
+  WORK_PROGRESS_DERIVED_SESSION_NOTICE,
+  WORK_PROGRESS_NO_CAPTURE_NO_LOCAL_PATH_HINT,
+  WORK_PROGRESS_NO_CAPTURE_WITH_LOCAL_PATH_HINT,
+  WORK_PROGRESS_NO_CAPTURE_YET_LABEL,
+  WORK_PROGRESS_SESSIONS_FILTER_NO_MATCH_HINT,
+  WORK_PROGRESS_SESSIONS_FILTER_NO_MATCH_LABEL,
+} from "@/lib/work-progress-session-ui";
 import { cn } from "@/lib/utils";
 import { getWorkProgressSessionsPageData } from "@/services/work-progress";
 import { notFound } from "next/navigation";
@@ -51,6 +63,12 @@ export default async function ProjectWorkProgressPage({
     filters,
   } = data;
 
+  const hasLocalPath = Boolean(project.localPath?.trim());
+  const noCaptureHint = hasLocalPath
+    ? WORK_PROGRESS_NO_CAPTURE_WITH_LOCAL_PATH_HINT
+    : WORK_PROGRESS_NO_CAPTURE_NO_LOCAL_PATH_HINT;
+  const clearFiltersHref = buildWorkProgressSessionsListHref(project.id);
+
   return (
     <>
       <PageHeader
@@ -79,10 +97,7 @@ export default async function ProjectWorkProgressPage({
       <Card className="mb-6">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-base font-medium">Project context</CardTitle>
-          <CardDescription>
-            Sessions are derived from existing snapshots. No explicit start/stop
-            session model yet.
-          </CardDescription>
+          <CardDescription>{WORK_PROGRESS_DERIVED_SESSION_NOTICE}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div>
@@ -99,11 +114,13 @@ export default async function ProjectWorkProgressPage({
           </div>
           <p className="text-xs text-muted-foreground">
             {entryCount === 0
-              ? "No snapshots captured yet."
+              ? WORK_PROGRESS_NO_CAPTURE_YET_LABEL
               : `${entryCount} snapshot${entryCount === 1 ? "" : "s"} grouped into ${totalSessionCount} session${totalSessionCount === 1 ? "" : "s"}.`}
           </p>
         </CardContent>
       </Card>
+
+      <WorkProgressUsageGuide className="mb-6" />
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -122,8 +139,9 @@ export default async function ProjectWorkProgressPage({
 
         {entryCount === 0 ? (
           <Card className="border-dashed">
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              No work progress captured yet.
+            <CardContent className="space-y-2 py-10 text-center text-sm text-muted-foreground">
+              <p>{WORK_PROGRESS_NO_CAPTURE_YET_LABEL}</p>
+              <p className="text-xs">{noCaptureHint}</p>
             </CardContent>
           </Card>
         ) : (
@@ -136,8 +154,21 @@ export default async function ProjectWorkProgressPage({
 
             {filteredCount === 0 ? (
               <Card className="border-dashed">
-                <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                  No work progress sessions match these filters.
+                <CardContent className="space-y-3 py-10 text-center text-sm text-muted-foreground">
+                  <div className="space-y-1">
+                    <p>{WORK_PROGRESS_SESSIONS_FILTER_NO_MATCH_LABEL}</p>
+                    <p className="text-xs">
+                      {WORK_PROGRESS_SESSIONS_FILTER_NO_MATCH_HINT}
+                    </p>
+                  </div>
+                  <Link
+                    href={clearFiltersHref}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                    )}
+                  >
+                    Clear filters
+                  </Link>
                 </CardContent>
               </Card>
             ) : (

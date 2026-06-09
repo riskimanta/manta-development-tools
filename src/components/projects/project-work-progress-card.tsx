@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { CaptureWorkProgressButton } from "@/components/projects/capture-work-progress-button";
 import { WorkProgressTerminalHint } from "@/components/projects/work-progress-terminal-hint";
+import { WorkProgressUsageGuide } from "@/components/projects/work-progress-usage-guide";
 import { WorkProgressList } from "@/components/projects/work-progress-list";
 import { formatRelativeTime } from "@/lib/format";
 import {
@@ -17,8 +18,11 @@ import {
   formatWorkProgressTimestamp,
   WORK_PROGRESS_DASHBOARD_LATEST_SAVED_SUMMARY_LABEL,
   WORK_PROGRESS_DASHBOARD_LATEST_SESSION_LABEL,
-  WORK_PROGRESS_DASHBOARD_NO_SNAPSHOTS_LABEL,
   WORK_PROGRESS_DASHBOARD_SUMMARY_SECTION_LABEL,
+  WORK_PROGRESS_NO_CAPTURE_NO_LOCAL_PATH_HINT,
+  WORK_PROGRESS_NO_CAPTURE_WITH_LOCAL_PATH_HINT,
+  WORK_PROGRESS_NO_CAPTURE_YET_LABEL,
+  WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_HINT,
   WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL,
   WORK_PROGRESS_SESSION_LIST_SUMMARY_LABEL,
 } from "@/lib/work-progress-session-ui";
@@ -40,6 +44,10 @@ export function ProjectWorkProgressCard({
 }: Props) {
   const sessionsHref = `/projects/${projectId}/work-progress`;
   const hasSnapshots = dashboardSummary.snapshotCount > 0;
+  const hasLocalPath = Boolean(localPath?.trim());
+  const noCaptureHint = hasLocalPath
+    ? WORK_PROGRESS_NO_CAPTURE_WITH_LOCAL_PATH_HINT
+    : WORK_PROGRESS_NO_CAPTURE_NO_LOCAL_PATH_HINT;
 
   return (
     <Card>
@@ -51,21 +59,24 @@ export function ProjectWorkProgressCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <WorkProgressUsageGuide />
+
         <CaptureWorkProgressButton
           projectId={projectId}
           localPath={localPath}
         />
 
-        {localPath?.trim() ? <WorkProgressTerminalHint /> : null}
+        {hasLocalPath ? <WorkProgressTerminalHint /> : null}
 
         <section className="rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
           <p className="text-xs font-medium text-muted-foreground">
             {WORK_PROGRESS_DASHBOARD_SUMMARY_SECTION_LABEL}
           </p>
           {!hasSnapshots ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {WORK_PROGRESS_DASHBOARD_NO_SNAPSHOTS_LABEL}
-            </p>
+            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+              <p>{WORK_PROGRESS_NO_CAPTURE_YET_LABEL}</p>
+              <p className="text-xs">{noCaptureHint}</p>
+            </div>
           ) : (
             <dl className="mt-2 grid gap-1.5 text-sm">
               <div className="flex flex-wrap gap-x-2">
@@ -104,7 +115,7 @@ export function ProjectWorkProgressCard({
                 href={sessionsHref}
                 className="text-xs font-medium text-primary hover:underline"
               >
-                View sessions
+                View all work progress
               </Link>
             </div>
             <dl className="mt-2 grid gap-1.5">
@@ -165,9 +176,12 @@ export function ProjectWorkProgressCard({
               </p>
             </div>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL}
-            </p>
+            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+              <p>{WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_LABEL}</p>
+              <p className="text-xs">
+                {WORK_PROGRESS_SESSION_LIST_NO_SUMMARY_HINT}
+              </p>
+            </div>
           )}
         </section>
 
@@ -183,9 +197,10 @@ export function ProjectWorkProgressCard({
 
         <section className="space-y-2">
           {entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No work progress snapshots yet.
-            </p>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <p>{WORK_PROGRESS_NO_CAPTURE_YET_LABEL}</p>
+              <p className="text-xs">{noCaptureHint}</p>
+            </div>
           ) : (
             <WorkProgressList entries={entries} className="space-y-2" />
           )}

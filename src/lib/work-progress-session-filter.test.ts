@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildWorkProgressSessionsListHref,
   deriveWorkProgressSessionBranchOptions,
   filterWorkProgressSessions,
   parseWorkProgressSessionFilters,
@@ -249,5 +250,22 @@ describe("deriveWorkProgressSessionBranchOptions", () => {
       "feat/work-progress",
       "main",
     ]);
+  });
+});
+
+describe("buildWorkProgressSessionsListHref", () => {
+  it("builds base and filtered session list hrefs", () => {
+    expect(buildWorkProgressSessionsListHref("proj-1")).toBe(
+      "/projects/proj-1/work-progress",
+    );
+    expect(
+      buildWorkProgressSessionsListHref("proj-1", {
+        q: "filters",
+        branch: "main",
+        status: "dirty",
+      }),
+    ).toBe(
+      "/projects/proj-1/work-progress?q=filters&branch=main&status=dirty",
+    );
   });
 });
