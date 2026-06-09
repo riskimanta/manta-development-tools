@@ -7,7 +7,8 @@ Closed Phase 5 Work Progress as a documented milestone. Updated documentation to
 `docs/work-progress-phase-5-closure`
 
 ## Commit
-`3f66d0f` — `docs: close work progress phase 5`
+`3f66d0f` — `docs: close work progress phase 5`  
+`c9729bb` — `docs: add phase 5L closure report (RESULT.md)`
 
 ## Delivered
 - Added/updated Phase 5 Work Progress closure documentation
@@ -40,7 +41,7 @@ Closed Phase 5 Work Progress as a documented milestone. Updated documentation to
 - Status: OPEN
 
 ## Git status
-On branch `docs/work-progress-phase-5-closure`, up to date with `origin/docs/work-progress-phase-5-closure`. Uncommitted change: `RESULT.md` (closure report).
+On branch `docs/work-progress-phase-5-closure`, up to date with `origin/docs/work-progress-phase-5-closure`, working tree clean.
 
 ## Known limitations
 - Docs-only phase
