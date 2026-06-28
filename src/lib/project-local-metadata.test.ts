@@ -5,8 +5,10 @@ import {
   detectProjectMetadataFromLocalPath,
   generateSlugFromName,
   humanizeFolderName,
+  MANDEV_BLUEPRINT_RELATIVE,
   MANDEV_PROJECT_RELATIVE,
   normalizeRepositoryUrl,
+  resolveMandevBlueprintJsonPath,
   resolveMandevProjectJsonPath,
 } from "@/lib/project-local-metadata";
 
@@ -286,12 +288,93 @@ describe("detectProjectMetadataFromLocalPath", () => {
       warnings: ["package.json was not found, using folder name only."],
     });
   });
+
+  it("reads automationLevel from .mandev/blueprint.json", async () => {
+    const blueprintPath = resolveMandevBlueprintJsonPath(root);
+    const readFile = mockReadFileForPaths({
+      [mandevProjectPath]: JSON.stringify({ name: "Blueprint App" }),
+      [blueprintPath]: JSON.stringify({
+        projectType: "fullstack-app",
+        stackProfile: "nextjs-prisma-sqlite",
+        architectureStyle: "feature-based",
+        automationLevel: "manual-assisted",
+        rulePacks: ["core-safe-change", "testing-validation"],
+      }),
+    });
+
+    const result = await detectProjectMetadataFromLocalPath(localPath, {
+      pathExists: () => true,
+      readFile,
+      execGit: vi.fn(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.blueprint?.automationLevel).toBe("manual-assisted");
+      expect(result.blueprint?.projectType).toBe("fullstack-app");
+      expect(result.blueprint?.stackProfile).toBe("nextjs-prisma-sqlite");
+      expect(result.blueprint?.rulePacks).toEqual([
+        "core-safe-change",
+        "testing-validation",
+      ]);
+    }
+  });
+
+  it("falls back to safe-autopilot when automationLevel is invalid", async () => {
+    const blueprintPath = resolveMandevBlueprintJsonPath(root);
+    const readFile = mockReadFileForPaths({
+      [mandevProjectPath]: JSON.stringify({ name: "Blueprint App" }),
+      [blueprintPath]: JSON.stringify({
+        automationLevel: "invalid-level",
+      }),
+    });
+
+    const result = await detectProjectMetadataFromLocalPath(localPath, {
+      pathExists: () => true,
+      readFile,
+      execGit: vi.fn(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.blueprint?.automationLevel).toBe("safe-autopilot");
+      expect(result.warnings).toContain(
+        ".mandev/blueprint.json had an invalid automationLevel; using safe-autopilot.",
+      );
+    }
+  });
+
+  it("keeps detect behavior when blueprint.json is missing", async () => {
+    const readFile = mockReadFileForPaths({
+      [mandevProjectPath]: JSON.stringify({ name: "No Blueprint" }),
+    });
+
+    const result = await detectProjectMetadataFromLocalPath(localPath, {
+      pathExists: () => true,
+      readFile,
+      execGit: vi.fn(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.blueprint).toBeUndefined();
+      expect(result.name).toBe("No Blueprint");
+    }
+  });
 });
 
 describe("MANDEV_PROJECT_RELATIVE", () => {
   it("points to .mandev/project.json", () => {
     expect(MANDEV_PROJECT_RELATIVE).toBe(
       path.join(".mandev", "project.json"),
+    );
+  });
+});
+
+describe("MANDEV_BLUEPRINT_RELATIVE", () => {
+  it("points to .mandev/blueprint.json", () => {
+    expect(MANDEV_BLUEPRINT_RELATIVE).toBe(
+      path.join(".mandev", "blueprint.json"),
     );
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import { Copy, ScanSearch } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,24 +10,29 @@ import {
   type ActionState,
 } from "@/app/projects/actions";
 import { FieldErrors } from "@/components/forms/field-errors";
+import { ProjectBlueprintPreview } from "@/components/projects/project-blueprint-preview";
+import { ProjectBlueprintRulePackGroups } from "@/components/projects/project-blueprint-rule-pack-groups";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { selectClassName, textareaClassName } from "@/lib/form-classes";
+import {
+  applyBlueprintPreset,
+  BLUEPRINT_PRESETS,
+  type BlueprintPresetId,
+} from "@/lib/project-blueprint-presets";
 import { buildProjectBlueprintPrompt } from "@/lib/project-blueprint-prompt";
 import {
-  AUTOMATION_RULE_PACKS,
-  CORE_RULE_PACKS,
   DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL,
   getDefaultRulePacksForStack,
+  getResetBlueprintDefaults,
   PROJECT_BLUEPRINT_ARCHITECTURE_STYLES,
   PROJECT_BLUEPRINT_ARCHITECTURE_STYLE_LABELS,
   PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG,
   PROJECT_BLUEPRINT_AUTOMATION_LEVELS,
   PROJECT_BLUEPRINT_PROJECT_TYPES,
   PROJECT_BLUEPRINT_PROJECT_TYPE_LABELS,
-  PROJECT_BLUEPRINT_RULE_PACK_LABELS,
   PROJECT_BLUEPRINT_STACK_PROFILES,
   PROJECT_BLUEPRINT_STACK_PROFILE_LABELS,
   type ProjectBlueprintArchitectureStyle,
@@ -83,27 +88,20 @@ export function ProjectCreateForm() {
     DEFAULT_PROJECT_ONBOARDING_MODE,
   );
   const [hasCopiedBlueprintPrompt, setHasCopiedBlueprintPrompt] = useState(false);
-
-  useEffect(() => {
-    setRulePacks(getDefaultRulePacksForStack(stackProfile));
-  }, [stackProfile]);
-
-  const setupPrompt = useMemo(
-    () => buildProjectSetupPrompt({ localPath: localPath.trim() || undefined }),
-    [localPath],
+  const [activePresetId, setActivePresetId] = useState<BlueprintPresetId | null>(
+    "balanced-recommended",
   );
 
-  const blueprintPrompt = useMemo(
-    () =>
-      buildProjectBlueprintPrompt({
-        localPath: localPath.trim() || undefined,
-        projectType,
-        stackProfile,
-        architectureStyle,
-        automationLevel,
-        rulePacks,
-        customNotes: customNotes.trim() || undefined,
-      }),
+  const blueprintInput = useMemo(
+    () => ({
+      localPath: localPath.trim() || undefined,
+      projectType,
+      stackProfile,
+      architectureStyle,
+      automationLevel,
+      rulePacks,
+      customNotes: customNotes.trim() || undefined,
+    }),
     [
       localPath,
       projectType,
@@ -114,6 +112,57 @@ export function ProjectCreateForm() {
       customNotes,
     ],
   );
+
+  const setupPrompt = useMemo(
+    () => buildProjectSetupPrompt({ localPath: localPath.trim() || undefined }),
+    [localPath],
+  );
+
+  const blueprintPrompt = useMemo(
+    () => buildProjectBlueprintPrompt(blueprintInput),
+    [blueprintInput],
+  );
+
+  function clearActivePreset() {
+    setActivePresetId(null);
+  }
+
+  function applyPreset(presetId: BlueprintPresetId) {
+    const result = applyBlueprintPreset(presetId, stackProfile);
+    setActivePresetId(presetId);
+    setAutomationLevel(result.automationLevel);
+    setRulePacks(result.rulePacks);
+    if (result.warnings?.length) {
+      for (const warning of result.warnings) {
+        toast.warning(warning);
+      }
+    }
+  }
+
+  function handleStackProfileChange(nextStack: ProjectBlueprintStackProfile) {
+    setStackProfile(nextStack);
+    if (activePresetId) {
+      const result = applyBlueprintPreset(activePresetId, nextStack);
+      setAutomationLevel(result.automationLevel);
+      setRulePacks(result.rulePacks);
+      return;
+    }
+    const reset = getResetBlueprintDefaults(nextStack);
+    setAutomationLevel(reset.automationLevel);
+    setRulePacks(reset.rulePacks);
+  }
+
+  function handleResetBlueprintDefaults() {
+    clearActivePreset();
+    const reset = getResetBlueprintDefaults(stackProfile);
+    setAutomationLevel(reset.automationLevel);
+    setRulePacks(reset.rulePacks);
+  }
+
+  function handleAutomationLevelChange(level: ProjectBlueprintAutomationLevel) {
+    clearActivePreset();
+    setAutomationLevel(level);
+  }
 
   async function handleCopySetupPrompt() {
     const ok = await copyText(setupPrompt);
@@ -132,32 +181,6 @@ export function ProjectCreateForm() {
     } else {
       toast.error("Unable to copy blueprint prompt.");
     }
-  }
-
-  function toggleRulePack(pack: ProjectBlueprintRulePack, checked: boolean) {
-    setRulePacks((current) => {
-      if (checked) {
-        return current.includes(pack) ? current : [...current, pack];
-      }
-      return current.filter((value) => value !== pack);
-    });
-  }
-
-  function renderRulePackCheckboxes(packs: ProjectBlueprintRulePack[]) {
-    return packs.map((pack) => (
-      <label
-        key={pack}
-        className="flex items-start gap-2 text-xs leading-snug"
-      >
-        <input
-          type="checkbox"
-          checked={rulePacks.includes(pack)}
-          onChange={(event) => toggleRulePack(pack, event.target.checked)}
-          className="mt-0.5 size-4 shrink-0 rounded border border-input accent-primary"
-        />
-        <span>{PROJECT_BLUEPRINT_RULE_PACK_LABELS[pack]}</span>
-      </label>
-    ));
   }
 
   function handleDetect() {
@@ -188,6 +211,29 @@ export function ProjectCreateForm() {
         setRepoUrl(metadata.repositoryUrl);
       }
       setLocalPath(metadata.localPath);
+
+      if (metadata.blueprint) {
+        const blueprint = metadata.blueprint;
+        if (blueprint.projectType) {
+          setProjectType(blueprint.projectType);
+        }
+        if (blueprint.stackProfile) {
+          setStackProfile(blueprint.stackProfile);
+        }
+        if (blueprint.architectureStyle) {
+          setArchitectureStyle(blueprint.architectureStyle);
+        }
+        if (blueprint.automationLevel) {
+          setAutomationLevel(blueprint.automationLevel);
+        }
+        if (blueprint.rulePacks) {
+          setRulePacks(blueprint.rulePacks);
+        }
+        if (blueprint.customNotes) {
+          setCustomNotes(blueprint.customNotes);
+        }
+        setActivePresetId(null);
+      }
 
       if (metadata.warnings.length > 0) {
         for (const warning of metadata.warnings) {
@@ -285,7 +331,7 @@ export function ProjectCreateForm() {
       </div>
 
       {onboardingUi.showBlueprintConfiguration ? (
-        <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+        <div className="min-w-0 space-y-4 rounded-lg border border-border bg-muted/20 p-4">
           {onboardingUi.showEmptyFolderNotice ? (
             <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
               Use this mode only for an empty folder or a project that has not
@@ -298,15 +344,16 @@ export function ProjectCreateForm() {
             an empty or new project folder.
           </p>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="blueprint-project-type">Project type</Label>
               <select
                 id="blueprint-project-type"
                 value={projectType}
-                onChange={(event) =>
-                  setProjectType(event.target.value as ProjectBlueprintProjectType)
-                }
+                onChange={(event) => {
+                  clearActivePreset();
+                  setProjectType(event.target.value as ProjectBlueprintProjectType);
+                }}
                 className={cn(selectClassName, "h-8 w-full text-sm")}
               >
                 {PROJECT_BLUEPRINT_PROJECT_TYPES.map((value) => (
@@ -323,7 +370,9 @@ export function ProjectCreateForm() {
                 id="blueprint-stack-profile"
                 value={stackProfile}
                 onChange={(event) =>
-                  setStackProfile(event.target.value as ProjectBlueprintStackProfile)
+                  handleStackProfileChange(
+                    event.target.value as ProjectBlueprintStackProfile,
+                  )
                 }
                 className={cn(selectClassName, "h-8 w-full text-sm")}
               >
@@ -340,11 +389,12 @@ export function ProjectCreateForm() {
               <select
                 id="blueprint-architecture-style"
                 value={architectureStyle}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearActivePreset();
                   setArchitectureStyle(
                     event.target.value as ProjectBlueprintArchitectureStyle,
-                  )
-                }
+                  );
+                }}
                 className={cn(selectClassName, "h-8 w-full text-sm")}
               >
                 {PROJECT_BLUEPRINT_ARCHITECTURE_STYLES.map((value) => (
@@ -357,6 +407,31 @@ export function ProjectCreateForm() {
           </div>
 
           <div className="space-y-2">
+            <p className="text-sm font-medium">Blueprint preset</p>
+            <div className="flex flex-wrap gap-2">
+              {BLUEPRINT_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => applyPreset(preset.id)}
+                  className={cn(
+                    "min-w-0 max-w-full rounded-md border p-2.5 text-left transition-colors sm:max-w-[calc(50%-0.25rem)]",
+                    activePresetId === preset.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/40",
+                  )}
+                  aria-pressed={activePresetId === preset.id}
+                >
+                  <p className="text-sm font-medium">{preset.label}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {preset.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <p className="text-sm font-medium">Automation level</p>
             <div className="grid gap-2 sm:grid-cols-3">
               {PROJECT_BLUEPRINT_AUTOMATION_LEVELS.map((level) => {
@@ -365,7 +440,7 @@ export function ProjectCreateForm() {
                   <button
                     key={level}
                     type="button"
-                    onClick={() => setAutomationLevel(level)}
+                    onClick={() => handleAutomationLevelChange(level)}
                     className={cn(
                       "rounded-md border p-3 text-left transition-colors",
                       automationLevel === level
@@ -376,45 +451,38 @@ export function ProjectCreateForm() {
                   >
                     <p className="text-sm font-medium">{config.label}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {config.description}
+                      {config.guidanceText}
                     </p>
                   </button>
                 );
               })}
             </div>
-            {automationLevel === "full-autopilot" ? (
-              <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
-                Full Autopilot should only be used when the project has strong
-                CI, deployment, rollback, and secret safety policies in place.
-              </p>
-            ) : null}
           </div>
 
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Core rule packs</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {renderRulePackCheckboxes(CORE_RULE_PACKS)}
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Automation rule packs</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {renderRulePackCheckboxes(AUTOMATION_RULE_PACKS)}
-            </div>
-          </fieldset>
+          <ProjectBlueprintRulePackGroups
+            rulePacks={rulePacks}
+            stackProfile={stackProfile}
+            onRulePacksChange={setRulePacks}
+            onResetDefaults={handleResetBlueprintDefaults}
+            onManualChange={clearActivePreset}
+          />
 
           <div className="space-y-1.5">
             <Label htmlFor="blueprint-custom-notes">Custom notes</Label>
             <Textarea
               id="blueprint-custom-notes"
               value={customNotes}
-              onChange={(event) => setCustomNotes(event.target.value)}
+              onChange={(event) => {
+                clearActivePreset();
+                setCustomNotes(event.target.value);
+              }}
               placeholder="Additional instructions for this project..."
               rows={3}
               className={cn(textareaClassName, "min-h-[4.5rem]")}
             />
           </div>
+
+          <ProjectBlueprintPreview input={blueprintInput} />
 
           <div className="flex flex-wrap gap-2">
             <Button

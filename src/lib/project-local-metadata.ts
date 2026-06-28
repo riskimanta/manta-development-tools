@@ -6,8 +6,22 @@ import { promisify } from "node:util";
 
 import type {
   DetectProjectMetadataResult,
+  MandevBlueprintJson,
   MandevProjectJson,
 } from "@/lib/project-local-metadata-types";
+import {
+  DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL,
+  PROJECT_BLUEPRINT_ARCHITECTURE_STYLES,
+  PROJECT_BLUEPRINT_AUTOMATION_LEVELS,
+  PROJECT_BLUEPRINT_PROJECT_TYPES,
+  PROJECT_BLUEPRINT_RULE_PACKS,
+  PROJECT_BLUEPRINT_STACK_PROFILES,
+  type ProjectBlueprintArchitectureStyle,
+  type ProjectBlueprintAutomationLevel,
+  type ProjectBlueprintProjectType,
+  type ProjectBlueprintRulePack,
+  type ProjectBlueprintStackProfile,
+} from "@/lib/project-blueprint-types";
 
 export type GitExecFn = (cwd: string, args: string[]) => Promise<string>;
 
@@ -20,6 +34,7 @@ type DetectDeps = {
 const execFileAsync = promisify(execFile);
 
 export const MANDEV_PROJECT_RELATIVE = path.join(".mandev", "project.json");
+export const MANDEV_BLUEPRINT_RELATIVE = path.join(".mandev", "blueprint.json");
 
 const defaultPathExists = (targetPath: string): boolean => fs.existsSync(targetPath);
 
@@ -173,6 +188,156 @@ export function resolveMandevProjectJsonPath(root: string): string {
   return resolveFileUnderRoot(root, MANDEV_PROJECT_RELATIVE);
 }
 
+export function resolveMandevBlueprintJsonPath(root: string): string {
+  return resolveFileUnderRoot(root, MANDEV_BLUEPRINT_RELATIVE);
+}
+
+function isProjectBlueprintProjectType(
+  value: string,
+): value is ProjectBlueprintProjectType {
+  return (PROJECT_BLUEPRINT_PROJECT_TYPES as string[]).includes(value);
+}
+
+function isProjectBlueprintStackProfile(
+  value: string,
+): value is ProjectBlueprintStackProfile {
+  return (PROJECT_BLUEPRINT_STACK_PROFILES as string[]).includes(value);
+}
+
+function isProjectBlueprintArchitectureStyle(
+  value: string,
+): value is ProjectBlueprintArchitectureStyle {
+  return (PROJECT_BLUEPRINT_ARCHITECTURE_STYLES as string[]).includes(value);
+}
+
+function isProjectBlueprintRulePack(value: string): value is ProjectBlueprintRulePack {
+  return (PROJECT_BLUEPRINT_RULE_PACKS as string[]).includes(value);
+}
+
+export function parseBlueprintAutomationLevel(
+  value: unknown,
+): { automationLevel: ProjectBlueprintAutomationLevel; warning: string | null } {
+  if (typeof value !== "string") {
+    return {
+      automationLevel: DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL,
+      warning: null,
+    };
+  }
+
+  if ((PROJECT_BLUEPRINT_AUTOMATION_LEVELS as string[]).includes(value)) {
+    return {
+      automationLevel: value as ProjectBlueprintAutomationLevel,
+      warning: null,
+    };
+  }
+
+  return {
+    automationLevel: DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL,
+    warning:
+      ".mandev/blueprint.json had an invalid automationLevel; using safe-autopilot.",
+  };
+}
+
+export function parseMandevBlueprintJson(
+  raw: string,
+): { blueprint: MandevBlueprintJson | null; warnings: string[] } {
+  const parsed = parseJsonObject(raw);
+  if (!parsed) {
+    return {
+      blueprint: null,
+      warnings: [".mandev/blueprint.json could not be parsed."],
+    };
+  }
+
+  const warnings: string[] = [];
+  const blueprint: MandevBlueprintJson = {};
+
+  const projectType = parsed.projectType;
+  if (typeof projectType === "string") {
+    if (isProjectBlueprintProjectType(projectType)) {
+      blueprint.projectType = projectType;
+    } else {
+      warnings.push(".mandev/blueprint.json had an invalid projectType.");
+    }
+  }
+
+  const stackProfile = parsed.stackProfile;
+  if (typeof stackProfile === "string") {
+    if (isProjectBlueprintStackProfile(stackProfile)) {
+      blueprint.stackProfile = stackProfile;
+    } else {
+      warnings.push(".mandev/blueprint.json had an invalid stackProfile.");
+    }
+  }
+
+  const architectureStyle = parsed.architectureStyle;
+  if (typeof architectureStyle === "string") {
+    if (isProjectBlueprintArchitectureStyle(architectureStyle)) {
+      blueprint.architectureStyle = architectureStyle;
+    } else {
+      warnings.push(".mandev/blueprint.json had an invalid architectureStyle.");
+    }
+  }
+
+  if ("automationLevel" in parsed) {
+    const { automationLevel, warning } = parseBlueprintAutomationLevel(
+      parsed.automationLevel,
+    );
+    blueprint.automationLevel = automationLevel;
+    if (warning) {
+      warnings.push(warning);
+    }
+  }
+
+  const rulePacks = parsed.rulePacks;
+  if (Array.isArray(rulePacks)) {
+    const validPacks = rulePacks.filter(
+      (pack): pack is ProjectBlueprintRulePack =>
+        typeof pack === "string" && isProjectBlueprintRulePack(pack),
+    );
+    if (validPacks.length > 0) {
+      blueprint.rulePacks = validPacks;
+    }
+    if (validPacks.length !== rulePacks.length) {
+      warnings.push(".mandev/blueprint.json contained invalid rule pack entries.");
+    }
+  }
+
+  const customNotes = readOptionalStringField(parsed, "customNotes");
+  if (customNotes) {
+    blueprint.customNotes = customNotes;
+  }
+
+  const hasFields = Object.keys(blueprint).length > 0;
+  return {
+    blueprint: hasFields ? blueprint : null,
+    warnings,
+  };
+}
+
+async function readMandevBlueprintJson(
+  root: string,
+  readFileFn: (filePath: string) => Promise<string>,
+): Promise<{ blueprint: MandevBlueprintJson | null; warnings: string[] }> {
+  try {
+    const blueprintPath = resolveMandevBlueprintJsonPath(root);
+    const raw = await readFileFn(blueprintPath);
+    return parseMandevBlueprintJson(raw);
+  } catch (err: unknown) {
+    const code =
+      err && typeof err === "object" && "code" in err
+        ? (err as NodeJS.ErrnoException).code
+        : undefined;
+    if (code === "ENOENT") {
+      return { blueprint: null, warnings: [] };
+    }
+    return {
+      blueprint: null,
+      warnings: [".mandev/blueprint.json could not be read."],
+    };
+  }
+}
+
 async function readGitRemoteOrigin(
   root: string,
   execGit: GitExecFn,
@@ -317,6 +482,14 @@ export async function detectProjectMetadataFromLocalPath(
     warnings.push(`ManDev notes: ${mandevFields.notes}`);
   }
 
+  const { blueprint, warnings: blueprintWarnings } = await readMandevBlueprintJson(
+    root,
+    readFileFn,
+  );
+  if (blueprintWarnings.length > 0) {
+    warnings.push(...blueprintWarnings);
+  }
+
   return {
     ok: true,
     name,
@@ -325,5 +498,6 @@ export async function detectProjectMetadataFromLocalPath(
     repositoryUrl,
     localPath: root,
     warnings,
+    ...(blueprint ? { blueprint } : {}),
   };
 }
