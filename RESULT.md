@@ -1,52 +1,49 @@
-# Phase 5L — Work Progress Closure Docs / Release Summary: MERGED
+# Phase 5O.1 — Merge Report
 
-## Summary
-Phase 5L closed Phase 5 Work Progress as a documented milestone. Documentation now describes the completed Work Progress workflow, current capabilities, usage guide, AI summary flow, data model overview, operational notes, known limitations, and recommended Phase 6 roadmap.
+## Status
+**MERGED** — Phase 5O.1 is on `main`.
 
-## PR
-- URL: https://github.com/riskimanta/manta-development-tools/pull/24
-- Status: MERGED
-- Merge commit: `d955f66`
-- Branch: `docs/work-progress-phase-5-closure`
-- Latest docs branch commit before merge: `df0f893`
+## PR #25
+**URL:** https://github.com/riskimanta/manta-development-tools/pull/25  
+**Result:** Merged into `main` (mergeable CLEAN, no conflicts)
 
-## Delivered
-- Added/updated Phase 5 Work Progress closure documentation
-- Documented final Work Progress workflow
-- Documented current Work Progress capabilities
-- Documented CLI/watch usage
-- Documented manual AI summary workflow
-- Documented data model overview
-- Documented Prisma generate/migrate/dev restart operational note
-- Documented known limitations
-- Added recommended Phase 6 roadmap
-- Updated docs index/path map
+## Commits
+| Role | Hash | Message |
+|------|------|---------|
+| Merge commit | `cbcf4b4` | Merge pull request #25 from riskimanta/feat/phase-5o1-onboarding-modes |
+| Feature commit | `4bab8eb` | feat: clarify new project onboarding modes |
 
-## Docs reviewed
-- `docs/features/work-progress-phase-5-closure.md`
-- `docs/features/work-progress-snapshot.md`
-- `docs/features/index.md`
-- `docs/features/path-map.md`
+## Validation
+| Command | Result |
+|---------|--------|
+| `pnpm test` | PASS — 63 files, 598 tests |
+| `pnpm lint` | PASS |
+| `pnpm typecheck` | PASS (after clearing stale `.next`) |
 
-## Validation on main
-| Check | Result |
-|-------|--------|
-| `pnpm db:generate` | Pass |
-| `pnpm db:migrate` | Pass — migration already applied |
-| `pnpm test` | Pass — 569 tests |
-| `pnpm typecheck` | Pass |
-| `pnpm lint` | Pass |
+## Manual Verification
+- Existing project selected by default
+- Existing mode: local path, Detect project, Prepare metadata with Cursor
+- New project mode: blueprint config and empty-folder warning
+- Blueprint prompt copy: toast + next-step guidance
+- Detect flow prefills metadata
+- Manual project creation works
+- No hydration errors
+- No horizontal overflow on desktop/mobile
 
-## Cleanup
-- Local `main` synced with `origin/main`
-- Docs branch deleted locally: yes (removed during `gh pr merge`)
-- Remote docs branch deleted/pruned: yes
-- Working tree clean: yes
+## Branch Cleanup
+| Branch | Status |
+|--------|--------|
+| Local `feat/phase-5o1-onboarding-modes` | Deleted |
+| Remote `origin/feat/phase-5o1-onboarding-modes` | Deleted (by `gh pr merge --delete-branch`) |
 
-## Known limitations
-- Docs-only phase
-- No new runtime capability added
-- Phase 6 roadmap is proposed, not implemented
+## Unrelated WIP (NOT merged)
+**Stash ref:** `stash@{0}` — `wip: unrelated changes before phase 5o1 commit`  
+Restore when ready: `git stash pop stash@{0}`
 
-## Final git status
-On branch `main`, up to date with `origin/main`, working tree clean.
+## Local Test Project (SQLite only)
+**Exists** — slug `phase-5o1-manual-verify` (id: `cmqxjzi4r0000ulg76qjy30fc`, name: `Phase 5O1 Manual Verify`)
+
+## Final Git Status
+```
+On branch main (up to date with origin/main)
+```
