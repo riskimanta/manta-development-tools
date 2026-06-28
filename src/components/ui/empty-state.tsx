@@ -17,8 +17,8 @@ export function EmptyState({
   children,
 }: EmptyStateProps) {
   return (
-    <Card className={cn("border-dashed bg-muted/20", className)}>
-      <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+    <Card className={cn("surface-card border-dashed bg-muted/10", className)}>
+      <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center sm:py-14">
         <div className="space-y-1">
           <p className="font-medium text-foreground">{title}</p>
           {description ? (
