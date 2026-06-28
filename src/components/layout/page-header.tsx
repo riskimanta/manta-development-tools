@@ -29,7 +29,7 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <div className="mb-8 space-y-4">
+    <div className="mb-6 space-y-4 sm:mb-8">
       <Breadcrumb>
         <BreadcrumbList>
           {items.map((item, i) => (

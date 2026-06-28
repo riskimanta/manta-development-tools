@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge, featureStatusBadgeVariant } from "@/components/ui/status-badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -73,11 +73,9 @@ export default async function FeaturesPage({ searchParams }: Props) {
         }
       />
 
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="surface-panel mb-6 flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Status
-          </p>
+          <p className="meta-label">Status</p>
           <div className="flex flex-wrap gap-2">
             <Link
               href={buildFeaturesListHref({ projectId: projectIdFilter })}
@@ -110,9 +108,7 @@ export default async function FeaturesPage({ searchParams }: Props) {
           </div>
         </div>
         <div className="space-y-2 lg:w-56 lg:shrink-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Project
-          </p>
+          <p className="meta-label">Project</p>
           <FeatureProjectFilter
             projects={projects.map((p) => ({
               id: p.id,
@@ -150,11 +146,13 @@ export default async function FeaturesPage({ searchParams }: Props) {
         <div className="space-y-2">
           {features.map((f) => (
             <Link key={f.id} href={`/features/${f.id}`}>
-              <Card className="transition-colors hover:border-primary/25 hover:bg-muted/20">
+              <Card className="surface-card-interactive">
                 <CardHeader className="pb-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <CardTitle className="font-heading text-base">{f.title}</CardTitle>
-                    <Badge variant="outline">{featureStatusLabel(f.status)}</Badge>
+                    <StatusBadge variant={featureStatusBadgeVariant(f.status)}>
+                      {featureStatusLabel(f.status)}
+                    </StatusBadge>
                   </div>
                   <CardDescription>
                     {f.project.name} · updated {formatRelativeTime(f.updatedAt)}

@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+/** Top-level Features nav is hidden; routes remain reachable from backlog/project detail. */
+const mobileNav = mainNav.filter((item) => item.href !== "/features");
+
 type MobileNavProps = {
   authEnabled?: boolean;
 };
@@ -40,7 +43,7 @@ export function MobileNav({ authEnabled = false }: MobileNavProps) {
           <SheetTitle className="font-heading text-base">ManDev</SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-0.5 p-3">
-          {mainNav.map((item) => {
+          {mobileNav.map((item) => {
             const active =
               item.href === "/"
                 ? pathname === "/"

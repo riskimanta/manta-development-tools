@@ -5,6 +5,11 @@ import { BacklogPriorityFilter } from "@/components/backlog/backlog-priority-fil
 import { FeatureProjectFilter } from "@/components/features/feature-project-filter";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { SectionHeader } from "@/components/ui/section-header";
+import {
+  StatusBadge,
+  featureStatusBadgeVariant,
+} from "@/components/ui/status-badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -63,14 +68,16 @@ function BacklogItemCard({
     <Link href={href}>
       <Card
         className={cn(
-          "transition-colors hover:border-primary/25 hover:bg-muted/20",
-          variant === "mandev" && "border-primary/20 bg-primary/[0.03]",
+          "surface-card-interactive",
+          variant === "mandev" && "border-primary/25 bg-primary/[0.04]",
         )}
       >
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle className="font-heading text-base">{title}</CardTitle>
-            <Badge variant="outline">{featureStatusLabel(status)}</Badge>
+            <StatusBadge variant={featureStatusBadgeVariant(status)}>
+              {featureStatusLabel(status)}
+            </StatusBadge>
             {priority != null ? (
               <Badge variant="secondary">P{priority}</Badge>
             ) : null}
@@ -161,11 +168,9 @@ export default async function BacklogPage({ searchParams }: Props) {
         </div>
       ) : null}
 
-      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div className="surface-panel mb-6 flex flex-col gap-4 p-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Status
-          </p>
+          <p className="meta-label">Status</p>
           <div className="flex flex-wrap gap-2">
             <Link
               href={buildBacklogListHref({
@@ -206,9 +211,7 @@ export default async function BacklogPage({ searchParams }: Props) {
         </div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="space-y-2 sm:w-56">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Project
-            </p>
+            <p className="meta-label">Project</p>
             <FeatureProjectFilter
               projects={projectOptions}
               projectId={projectIdFilter}
@@ -219,9 +222,7 @@ export default async function BacklogPage({ searchParams }: Props) {
             />
           </div>
           <div className="space-y-2 sm:w-56">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Priority
-            </p>
+            <p className="meta-label">Priority</p>
             <BacklogPriorityFilter
               priority={priorityFilter}
               status={statusFilter}
@@ -256,27 +257,26 @@ export default async function BacklogPage({ searchParams }: Props) {
         <div className="space-y-8">
           {hasMandevProject && mandevProject ? (
             <section aria-labelledby="backlog-mandev-heading">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2
-                    id="backlog-mandev-heading"
-                    className="font-heading text-lg font-semibold tracking-tight"
-                  >
-                    ManDev product backlog
-                  </h2>
-                  <Badge>Internal</Badge>
-                </div>
-                <Link
-                  href={buildFeatureNewHref({ projectId: mandevProject.id })}
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    "inline-flex items-center gap-1.5",
-                  )}
-                >
-                  <Plus className="size-3.5" />
-                  New ManDev backlog item
-                </Link>
-              </div>
+              <SectionHeader
+                id="backlog-mandev-heading"
+                title="ManDev product backlog"
+                actions={
+                  <>
+                    <Badge>Internal</Badge>
+                    <Link
+                      href={buildFeatureNewHref({ projectId: mandevProject.id })}
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "sm" }),
+                        "inline-flex items-center gap-1.5",
+                      )}
+                    >
+                      <Plus className="size-3.5" />
+                      New item
+                    </Link>
+                  </>
+                }
+                className="mb-3"
+              />
               {mandev.length > 0 ? (
                 <div className="space-y-2">
                   {mandev.map((f) => (
@@ -299,12 +299,11 @@ export default async function BacklogPage({ searchParams }: Props) {
 
           {otherByProject.length > 0 ? (
             <section aria-labelledby="backlog-other-heading">
-              <h2
+              <SectionHeader
                 id="backlog-other-heading"
-                className="mb-4 font-heading text-lg font-semibold tracking-tight"
-              >
-                Other project backlogs
-              </h2>
+                title="Other project backlogs"
+                className="mb-4"
+              />
               <div className="space-y-6">
                 {otherByProject.map(({ project, items }) => (
                   <div key={project.id}>

@@ -2,11 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import { DeleteFeatureButton } from "@/components/features/delete-feature-button";
 import { FeatureCursorPromptActions } from "@/components/features/feature-cursor-prompt-actions";
 import { FeatureEditForm } from "@/components/features/feature-edit-form";
+import { SectionHeader } from "@/components/ui/section-header";
+import {
+  StatusBadge,
+  featureStatusBadgeVariant,
+} from "@/components/ui/status-badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { featureStatusLabel, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getFeatureById } from "@/services/features";
@@ -48,19 +53,19 @@ export default async function FeatureDetailPage({ params }: Props) {
       />
 
       {feature.description ? (
-        <div className="mb-8 rounded-xl border border-border/80 bg-muted/20 p-4 text-sm text-muted-foreground">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-foreground">
-            Description
-          </p>
-          <p className="whitespace-pre-wrap text-foreground/90">
-            {feature.description}
-          </p>
-        </div>
+        <Card className="surface-card mb-8">
+          <CardContent className="py-4">
+            <p className="meta-label mb-2">Description</p>
+            <p className="whitespace-pre-wrap text-sm text-foreground/90">
+              {feature.description}
+            </p>
+          </CardContent>
+        </Card>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <h2 className="mb-4 font-heading text-lg font-semibold">Edit</h2>
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="min-w-0 space-y-4">
+          <SectionHeader title="Edit feature" />
           <FeatureEditForm
             feature={{
               id: feature.id,
@@ -72,8 +77,9 @@ export default async function FeatureDetailPage({ params }: Props) {
             }}
             projects={projectOptions}
           />
-        </div>
-        <aside className="space-y-6">
+        </section>
+
+        <aside className="space-y-4">
           <FeatureCursorPromptActions
             project={{
               name: feature.project.name,
@@ -89,25 +95,38 @@ export default async function FeatureDetailPage({ params }: Props) {
             }}
           />
 
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">Meta</h3>
-            <div className="rounded-xl border border-border/80 bg-card/40 p-4 text-sm">
-              <dl className="space-y-2">
+          <Card className="surface-card">
+            <CardContent className="space-y-3 py-4">
+              <p className="meta-label">Meta</p>
+              <dl className="space-y-3 text-sm">
                 <div>
                   <dt className="text-xs text-muted-foreground">Status</dt>
-                  <dd className="mt-0.5">
-                    <Badge>{featureStatusLabel(feature.status)}</Badge>
+                  <dd className="mt-1">
+                    <StatusBadge variant={featureStatusBadgeVariant(feature.status)}>
+                      {featureStatusLabel(feature.status)}
+                    </StatusBadge>
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Priority</dt>
-                  <dd className="font-mono text-xs">
+                  <dd className="mt-1 font-mono text-xs">
                     {feature.priority ?? "—"}
                   </dd>
                 </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Project</dt>
+                  <dd className="mt-1">
+                    <Link
+                      href={`/projects/${feature.projectId}`}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      {feature.project.name}
+                    </Link>
+                  </dd>
+                </div>
               </dl>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </aside>
       </div>
     </>

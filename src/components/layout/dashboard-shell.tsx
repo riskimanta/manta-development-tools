@@ -15,9 +15,9 @@ export function DashboardShell({
   authEnabled = false,
 }: DashboardShellProps) {
   return (
-    <div className="flex min-h-svh w-full bg-background">
+    <div className="flex h-svh w-full overflow-hidden bg-background">
       <AppSidebar authEnabled={authEnabled} className="hidden md:flex" />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
         <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background/80 px-4 backdrop-blur-md supports-backdrop-filter:bg-background/70 sm:gap-3 lg:px-6">
           <MobileNav authEnabled={authEnabled} />
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -33,7 +33,7 @@ export function DashboardShell({
           ) : null}
           <ThemeToggle />
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 lg:px-8">
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>
