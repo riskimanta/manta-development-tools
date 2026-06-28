@@ -8,6 +8,8 @@ import {
   projectCreateSchema,
   projectUpdateSchema,
 } from "@/lib/validations/project";
+import { detectProjectMetadataFromLocalPath } from "@/lib/project-local-metadata";
+import type { DetectProjectMetadataActionResult } from "@/lib/project-local-metadata-types";
 import {
   createProjectRecord,
   deleteProjectRecord,
@@ -27,6 +29,28 @@ function flattenZodErrors(error: { flatten: () => { fieldErrors: Record<string, 
     if (v?.length) out[k] = v;
   }
   return out;
+}
+
+export async function detectProjectMetadataAction(
+  localPath: string,
+): Promise<DetectProjectMetadataActionResult> {
+  const result = await detectProjectMetadataFromLocalPath(localPath);
+  if (!result.ok) {
+    return { ok: false, message: result.message };
+  }
+
+  return {
+    ok: true,
+    metadata: {
+      name: result.name,
+      slug: result.slug,
+      description: result.description,
+      repositoryUrl: result.repositoryUrl,
+      localPath: result.localPath,
+      warnings: result.warnings,
+    },
+    message: "Project details detected. Review before creating.",
+  };
 }
 
 export async function createProject(
