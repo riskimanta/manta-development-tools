@@ -15,7 +15,7 @@ export default function NewProjectPage() {
           { label: "New" },
         ]}
         title="New project"
-        description="Define a slug and optional links so features can be routed to the right codebase."
+        description="Enter a local path to auto-detect details, or fill the form manually before creating the project."
         actions={
           <Link
             href="/projects"

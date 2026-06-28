@@ -9,11 +9,18 @@ import {
   updateProjectRecord,
 } from "@/services/projects";
 
+import { detectProjectMetadataFromLocalPath } from "@/lib/project-local-metadata";
+
 import {
   createProject,
   deleteProject,
+  detectProjectMetadataAction,
   updateProject,
 } from "./actions";
+
+vi.mock("@/lib/project-local-metadata", () => ({
+  detectProjectMetadataFromLocalPath: vi.fn(),
+}));
 
 vi.mock("@/services/projects", () => ({
   createProjectRecord: vi.fn(),
@@ -56,6 +63,53 @@ const normalizedProjectData = {
   repoUrl: "https://github.com/example/mandev",
   localPath: "/Users/dev/mandev",
 };
+
+describe("detectProjectMetadataAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns metadata when detection succeeds", async () => {
+    vi.mocked(detectProjectMetadataFromLocalPath).mockResolvedValue({
+      ok: true,
+      name: "ManDev",
+      slug: "mandev",
+      description: "Internal tools",
+      repositoryUrl: "https://github.com/example/mandev",
+      localPath: "/Users/dev/mandev",
+      warnings: [],
+    });
+
+    const result = await detectProjectMetadataAction("/Users/dev/mandev");
+
+    expect(result).toEqual({
+      ok: true,
+      metadata: {
+        name: "ManDev",
+        slug: "mandev",
+        description: "Internal tools",
+        repositoryUrl: "https://github.com/example/mandev",
+        localPath: "/Users/dev/mandev",
+        warnings: [],
+      },
+      message: "Project details detected. Review before creating.",
+    });
+  });
+
+  it("returns an error when detection fails", async () => {
+    vi.mocked(detectProjectMetadataFromLocalPath).mockResolvedValue({
+      ok: false,
+      message: "Local path does not exist.",
+    });
+
+    const result = await detectProjectMetadataAction("/missing/path");
+
+    expect(result).toEqual({
+      ok: false,
+      message: "Local path does not exist.",
+    });
+  });
+});
 
 describe("createProject", () => {
   beforeEach(() => {
