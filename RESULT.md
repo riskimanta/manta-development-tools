@@ -69,11 +69,15 @@ Generated blueprint prompt includes automation level policy, selected rule pack 
 | Field | Value |
 |-------|-------|
 | Branch | `feat/advanced-project-automation-rule-packs` |
-| Commit | `feat: add advanced project automation rule packs` |
-| PR | (see below after push) |
+| Commit | `07b45ee` — `feat: add advanced project automation rule packs` |
+| PR | https://github.com/riskimanta/manta-development-tools/pull/28 |
 
 ## Final Git Status
-(captured after commit/push)
+```
+On branch feat/advanced-project-automation-rule-packs
+Your branch is up to date with 'origin/feat/advanced-project-automation-rule-packs'.
+nothing to commit, working tree clean
+```
 
 ## Known Limitations
 - Blueprint prompt generation and UI choices only — no in-ManDev deploy execution.
