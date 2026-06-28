@@ -1,5 +1,6 @@
 import {
   PROJECT_BLUEPRINT_ARCHITECTURE_STYLE_LABELS,
+  PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG,
   PROJECT_BLUEPRINT_PROJECT_TYPE_LABELS,
   PROJECT_BLUEPRINT_RULE_PACK_LABELS,
   PROJECT_BLUEPRINT_STACK_PROFILE_LABELS,
@@ -8,6 +9,93 @@ import {
   type ProjectBlueprintRulePack,
   type ProjectBlueprintStackProfile,
 } from "@/lib/project-blueprint-types";
+
+const RULE_PACK_POLICY_DETAILS: Partial<
+  Record<ProjectBlueprintRulePack, string[]>
+> = {
+  "result-md-workflow-discipline": [
+    "Every task overwrites `RESULT.md`.",
+    "No appending endless logs.",
+    "RESULT.md must include status, changed files, validation, errors, root cause, next actions, and git status.",
+    "Do not claim done unless RESULT.md is updated.",
+  ],
+  "auto-error-recovery-loop": [
+    "After code changes, run lint/typecheck/test/build.",
+    "If errors occur, inspect root cause, fix, and re-run.",
+    "Limit recovery loops to avoid infinite repair.",
+    "Never disable lint/type rules just to pass validation unless justified.",
+    "If still failing, write failure report to RESULT.md.",
+  ],
+  "git-automation-guardrails": [
+    "Never use `git add .`.",
+    "Never use `git commit -am`.",
+    "Create feature/fix/chore/docs branches.",
+    "Stage scoped files only.",
+    "Commit only after validations pass.",
+    "Push branch and create PR when appropriate.",
+    "Merge only if checks pass and policy allows it.",
+  ],
+  "cicd-pipeline-discipline": [
+    "Project should have CI for install, lint, typecheck, test, and build.",
+    "CI must fail on critical validation failures.",
+    "Keep lockfile/package manager consistent.",
+    "Do not merge PRs with failing CI.",
+  ],
+  "deployment-automation-guard": [
+    "Deploy only from main/release branches.",
+    "Deploy only after CI passes.",
+    "Validate required environment variables.",
+    "Never print secrets.",
+    "Run smoke checks after deploy.",
+    "Write deploy status to RESULT.md.",
+  ],
+  "branch-release-policy": [
+    "feature/* for features",
+    "fix/* for bugs",
+    "chore/* for maintenance",
+    "docs/* for docs",
+    "release/* if release branches are used",
+    "main must remain deployable",
+  ],
+  "rule-skill-sync-automation": [
+    "Maintain local project rules/skills.",
+    "Detect outdated rule packs.",
+    "Auto-update safe minor/non-breaking rule changes.",
+    "Ask approval for breaking workflow changes.",
+    "Record rule sync result in RESULT.md.",
+  ],
+  "environment-secret-safety": [
+    "Never commit `.env`.",
+    "Maintain `.env.example`.",
+    "Validate required env vars before build/deploy.",
+    "Never print secrets to logs or RESULT.md.",
+  ],
+  "smoke-test-health-check": [
+    "Check key routes after dev/build/deploy.",
+    "Check API health route if available.",
+    "Check browser console for hydration/runtime errors where relevant.",
+    "Record smoke test result in RESULT.md.",
+  ],
+  "rollback-failure-protocol": [
+    "If deploy fails, stop further deploy steps.",
+    "Identify last known good commit/deploy.",
+    "Provide rollback plan.",
+    "Execute rollback only if policy allows it.",
+    "Record rollback result in RESULT.md.",
+  ],
+  "dependency-update-safety": [
+    "Do not auto-upgrade major dependencies without approval.",
+    "Check changelog/breaking changes.",
+    "Validate after dependency updates.",
+    "Keep lockfile consistent.",
+  ],
+  "pr-review-self-checklist": [
+    "Summarize changes, risks, files, validation, and screenshots/manual checks if relevant.",
+    "Check for unrelated files.",
+    "Check for debug logs.",
+    "Confirm RESULT.md is accurate.",
+  ],
+};
 
 function formatLocalPathContext(localPath: string | undefined): string {
   const trimmed = localPath?.trim();
@@ -253,12 +341,68 @@ function formatCustomNotesBlock(customNotes: string | undefined): string {
   return `\n## Additional instructions from ManDev\n\n${trimmed}\n`;
 }
 
+function formatSelectedRulePackPolicies(
+  rulePacks: ProjectBlueprintRulePack[],
+): string {
+  const sections = rulePacks
+    .map((pack) => {
+      const policies = RULE_PACK_POLICY_DETAILS[pack];
+      if (!policies || policies.length === 0) {
+        return null;
+      }
+      const label = PROJECT_BLUEPRINT_RULE_PACK_LABELS[pack];
+      const bullets = policies.map((policy) => `- ${policy}`).join("\n");
+      return `### ${label}\n\n${bullets}`;
+    })
+    .filter((section): section is string => section !== null);
+
+  if (sections.length === 0) {
+    return "";
+  }
+
+  return `\n## Selected rule pack policies\n\n${sections.join("\n\n")}\n`;
+}
+
+function formatConditionalTaskExtensions(
+  rulePacks: ProjectBlueprintRulePack[],
+): string {
+  const extensions: string[] = [];
+  const packSet = new Set(rulePacks);
+
+  if (packSet.has("cicd-pipeline-discipline")) {
+    extensions.push(
+      "- Add or document CI/CD config (install, lint, typecheck, test, build) when appropriate for the stack.",
+    );
+  }
+  if (packSet.has("deployment-automation-guard")) {
+    extensions.push(
+      "- Add deployment notes/config placeholders without credentials or secrets.",
+    );
+  }
+  if (packSet.has("smoke-test-health-check")) {
+    extensions.push("- Document smoke test and health check steps in onboarding or workflow docs.");
+  }
+  if (packSet.has("rollback-failure-protocol")) {
+    extensions.push("- Document rollback and failure protocol notes.");
+  }
+  if (packSet.has("rule-skill-sync-automation")) {
+    extensions.push("- Document how local rules/skills stay in sync with project policy.");
+  }
+
+  if (extensions.length === 0) {
+    return "";
+  }
+
+  return `\nAdditional deliverables for selected automation packs:\n${extensions.join("\n")}\n`;
+}
+
 export function buildProjectBlueprintPrompt(input: ProjectBlueprintInput): string {
   const {
     localPath,
     projectType,
     stackProfile,
     architectureStyle,
+    automationLevel,
     rulePacks,
     customNotes,
   } = input;
@@ -267,18 +411,23 @@ export function buildProjectBlueprintPrompt(input: ProjectBlueprintInput): strin
   const stackLabel = PROJECT_BLUEPRINT_STACK_PROFILE_LABELS[stackProfile];
   const architectureLabel =
     PROJECT_BLUEPRINT_ARCHITECTURE_STYLE_LABELS[architectureStyle];
+  const automationConfig =
+    PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG[automationLevel];
   const localPathContext = formatLocalPathContext(localPath);
   const runProfilesExample = getRunProfilesExample(stackProfile);
   const stackGuidance = getStackGuidance(stackProfile);
   const rulePacksList = formatRulePacksList(rulePacks);
   const cursorRuleFiles = formatCursorRuleFiles(rulePacks);
   const customNotesBlock = formatCustomNotesBlock(customNotes);
+  const rulePackPoliciesBlock = formatSelectedRulePackPolicies(rulePacks);
+  const conditionalTaskExtensions = formatConditionalTaskExtensions(rulePacks);
 
   const blueprintJsonExample = JSON.stringify(
     {
       projectType,
       stackProfile,
       architectureStyle,
+      automationLevel,
       rulePacks,
       customNotes: customNotes?.trim() || "Optional user notes.",
       createdBy: "ManDev Project Blueprint Starter",
@@ -309,9 +458,14 @@ Keep output concise, valid, and practical — avoid overengineering.
 - Project type: ${projectTypeLabel} (\`${projectType}\`)
 - Stack profile: ${stackLabel} (\`${stackProfile}\`)
 - Architecture style: ${architectureLabel} (\`${architectureStyle}\`)
+- Automation level: ${automationConfig.label} (\`${automationLevel}\`)
 - Rule packs:
 ${rulePacksList}
 ${customNotesBlock}
+## Automation level policy
+
+${automationConfig.safetyPolicyText}
+${rulePackPoliciesBlock}
 ## Your task
 
 1. Create or update the \`.mandev\` folder.
@@ -321,7 +475,7 @@ ${customNotesBlock}
 5. Generate Cursor rules matching the selected rule packs.
 6. Keep all JSON files valid and concise.
 7. Do not scaffold application source code unless the folder is empty and a minimal starter is clearly required — focus on metadata, rules, and documentation first.
-
+${conditionalTaskExtensions}
 ## Stack-specific guidance
 
 ${stackGuidance}
@@ -444,6 +598,7 @@ Initialized project blueprint using ManDev.
 - Project type: ${projectTypeLabel}
 - Stack profile: ${stackLabel}
 - Architecture style: ${architectureLabel}
+- Automation level: ${automationConfig.label}
 - Rule packs: ${rulePacksForResult}
 
 ## Files created

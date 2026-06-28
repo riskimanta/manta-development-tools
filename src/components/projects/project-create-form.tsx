@@ -17,16 +17,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { selectClassName, textareaClassName } from "@/lib/form-classes";
 import { buildProjectBlueprintPrompt } from "@/lib/project-blueprint-prompt";
 import {
+  AUTOMATION_RULE_PACKS,
+  CORE_RULE_PACKS,
+  DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL,
   getDefaultRulePacksForStack,
   PROJECT_BLUEPRINT_ARCHITECTURE_STYLES,
   PROJECT_BLUEPRINT_ARCHITECTURE_STYLE_LABELS,
+  PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG,
+  PROJECT_BLUEPRINT_AUTOMATION_LEVELS,
   PROJECT_BLUEPRINT_PROJECT_TYPES,
   PROJECT_BLUEPRINT_PROJECT_TYPE_LABELS,
-  PROJECT_BLUEPRINT_RULE_PACKS,
   PROJECT_BLUEPRINT_RULE_PACK_LABELS,
   PROJECT_BLUEPRINT_STACK_PROFILES,
   PROJECT_BLUEPRINT_STACK_PROFILE_LABELS,
   type ProjectBlueprintArchitectureStyle,
+  type ProjectBlueprintAutomationLevel,
   type ProjectBlueprintProjectType,
   type ProjectBlueprintRulePack,
   type ProjectBlueprintStackProfile,
@@ -66,6 +71,10 @@ export function ProjectCreateForm() {
     useState<ProjectBlueprintStackProfile>("nextjs-prisma-sqlite");
   const [architectureStyle, setArchitectureStyle] =
     useState<ProjectBlueprintArchitectureStyle>("feature-based");
+  const [automationLevel, setAutomationLevel] =
+    useState<ProjectBlueprintAutomationLevel>(
+      DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL,
+    );
   const [rulePacks, setRulePacks] = useState<ProjectBlueprintRulePack[]>(() =>
     getDefaultRulePacksForStack("nextjs-prisma-sqlite"),
   );
@@ -91,6 +100,7 @@ export function ProjectCreateForm() {
         projectType,
         stackProfile,
         architectureStyle,
+        automationLevel,
         rulePacks,
         customNotes: customNotes.trim() || undefined,
       }),
@@ -99,6 +109,7 @@ export function ProjectCreateForm() {
       projectType,
       stackProfile,
       architectureStyle,
+      automationLevel,
       rulePacks,
       customNotes,
     ],
@@ -130,6 +141,23 @@ export function ProjectCreateForm() {
       }
       return current.filter((value) => value !== pack);
     });
+  }
+
+  function renderRulePackCheckboxes(packs: ProjectBlueprintRulePack[]) {
+    return packs.map((pack) => (
+      <label
+        key={pack}
+        className="flex items-start gap-2 text-xs leading-snug"
+      >
+        <input
+          type="checkbox"
+          checked={rulePacks.includes(pack)}
+          onChange={(event) => toggleRulePack(pack, event.target.checked)}
+          className="mt-0.5 size-4 shrink-0 rounded border border-input accent-primary"
+        />
+        <span>{PROJECT_BLUEPRINT_RULE_PACK_LABELS[pack]}</span>
+      </label>
+    ));
   }
 
   function handleDetect() {
@@ -328,23 +356,51 @@ export function ProjectCreateForm() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Automation level</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {PROJECT_BLUEPRINT_AUTOMATION_LEVELS.map((level) => {
+                const config = PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG[level];
+                return (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setAutomationLevel(level)}
+                    className={cn(
+                      "rounded-md border p-3 text-left transition-colors",
+                      automationLevel === level
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:bg-muted/40",
+                    )}
+                    aria-pressed={automationLevel === level}
+                  >
+                    <p className="text-sm font-medium">{config.label}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {config.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+            {automationLevel === "full-autopilot" ? (
+              <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+                Full Autopilot should only be used when the project has strong
+                CI, deployment, rollback, and secret safety policies in place.
+              </p>
+            ) : null}
+          </div>
+
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Rule packs</legend>
+            <legend className="text-sm font-medium">Core rule packs</legend>
             <div className="grid gap-2 sm:grid-cols-2">
-              {PROJECT_BLUEPRINT_RULE_PACKS.map((pack) => (
-                <label
-                  key={pack}
-                  className="flex items-start gap-2 text-xs leading-snug"
-                >
-                  <input
-                    type="checkbox"
-                    checked={rulePacks.includes(pack)}
-                    onChange={(event) => toggleRulePack(pack, event.target.checked)}
-                    className="mt-0.5 size-4 shrink-0 rounded border border-input accent-primary"
-                  />
-                  <span>{PROJECT_BLUEPRINT_RULE_PACK_LABELS[pack]}</span>
-                </label>
-              ))}
+              {renderRulePackCheckboxes(CORE_RULE_PACKS)}
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">Automation rule packs</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {renderRulePackCheckboxes(AUTOMATION_RULE_PACKS)}
             </div>
           </fieldset>
 

@@ -38,7 +38,27 @@ export type ProjectBlueprintRulePack =
   | "testing-validation"
   | "documentation-discipline"
   | "local-first-tooling"
-  | "enterprise-backend";
+  | "enterprise-backend"
+  | "result-md-workflow-discipline"
+  | "auto-error-recovery-loop"
+  | "git-automation-guardrails"
+  | "cicd-pipeline-discipline"
+  | "deployment-automation-guard"
+  | "branch-release-policy"
+  | "rule-skill-sync-automation"
+  | "environment-secret-safety"
+  | "smoke-test-health-check"
+  | "rollback-failure-protocol"
+  | "dependency-update-safety"
+  | "pr-review-self-checklist";
+
+export type ProjectBlueprintAutomationLevel =
+  | "manual-assisted"
+  | "safe-autopilot"
+  | "full-autopilot";
+
+export const DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL: ProjectBlueprintAutomationLevel =
+  "safe-autopilot";
 
 export const PROJECT_BLUEPRINT_PROJECT_TYPES: ProjectBlueprintProjectType[] = [
   "saas-dashboard",
@@ -85,7 +105,72 @@ export const PROJECT_BLUEPRINT_RULE_PACKS: ProjectBlueprintRulePack[] = [
   "documentation-discipline",
   "local-first-tooling",
   "enterprise-backend",
+  "result-md-workflow-discipline",
+  "auto-error-recovery-loop",
+  "git-automation-guardrails",
+  "cicd-pipeline-discipline",
+  "deployment-automation-guard",
+  "branch-release-policy",
+  "rule-skill-sync-automation",
+  "environment-secret-safety",
+  "smoke-test-health-check",
+  "rollback-failure-protocol",
+  "dependency-update-safety",
+  "pr-review-self-checklist",
 ];
+
+export const AUTOMATION_RULE_PACKS: ProjectBlueprintRulePack[] = [
+  "result-md-workflow-discipline",
+  "auto-error-recovery-loop",
+  "git-automation-guardrails",
+  "cicd-pipeline-discipline",
+  "deployment-automation-guard",
+  "branch-release-policy",
+  "rule-skill-sync-automation",
+  "environment-secret-safety",
+  "smoke-test-health-check",
+  "rollback-failure-protocol",
+  "dependency-update-safety",
+  "pr-review-self-checklist",
+];
+
+export const CORE_RULE_PACKS: ProjectBlueprintRulePack[] =
+  PROJECT_BLUEPRINT_RULE_PACKS.filter((pack) => !AUTOMATION_RULE_PACKS.includes(pack));
+
+export const PROJECT_BLUEPRINT_AUTOMATION_LEVELS: ProjectBlueprintAutomationLevel[] =
+  ["manual-assisted", "safe-autopilot", "full-autopilot"];
+
+export type ProjectBlueprintAutomationLevelConfig = {
+  label: string;
+  description: string;
+  safetyPolicyText: string;
+};
+
+export const PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG: Record<
+  ProjectBlueprintAutomationLevel,
+  ProjectBlueprintAutomationLevelConfig
+> = {
+  "manual-assisted": {
+    label: "Manual Assisted",
+    description: "AI gives guidance; you decide commit, push, merge, and deploy.",
+    safetyPolicyText:
+      "Operate in manual-assisted mode. Provide recommendations and draft changes, but the user decides when to commit, push, open or merge pull requests, and deploy. Never merge or deploy without explicit user approval.",
+  },
+  "safe-autopilot": {
+    label: "Safe Autopilot",
+    description:
+      "AI may branch, validate, fix errors, commit, push, and open PRs. Merge and deploy need approval.",
+    safetyPolicyText:
+      "Operate in safe-autopilot mode. You may create feature/fix/chore/docs branches, run validation, fix errors, stage scoped files, commit after validations pass, push branches, and create pull requests. Do not merge pull requests or deploy without explicit user approval, even when CI passes.",
+  },
+  "full-autopilot": {
+    label: "Full Autopilot",
+    description:
+      "AI may merge and deploy automatically only when all gates pass and project policy allows.",
+    safetyPolicyText:
+      "Operate in full-autopilot mode. You may merge pull requests and deploy automatically only when all CI gates pass, required environment variables are validated, smoke checks succeed, and the project's deployment and rollback policies allow it. Stop and report to RESULT.md if any gate fails or policy is unclear.",
+  },
+};
 
 export const PROJECT_BLUEPRINT_PROJECT_TYPE_LABELS: Record<
   ProjectBlueprintProjectType,
@@ -143,6 +228,18 @@ export const PROJECT_BLUEPRINT_RULE_PACK_LABELS: Record<
   "documentation-discipline": "Documentation Discipline",
   "local-first-tooling": "Local-first Tooling",
   "enterprise-backend": "Enterprise Backend Discipline",
+  "result-md-workflow-discipline": "RESULT.md Workflow Discipline",
+  "auto-error-recovery-loop": "Auto Error Recovery Loop",
+  "git-automation-guardrails": "Git Automation Guardrails",
+  "cicd-pipeline-discipline": "CI/CD Pipeline Discipline",
+  "deployment-automation-guard": "Deployment Automation Guard",
+  "branch-release-policy": "Branch & Release Policy",
+  "rule-skill-sync-automation": "Rule/Skill Sync Automation",
+  "environment-secret-safety": "Environment & Secret Safety",
+  "smoke-test-health-check": "Smoke Test & Health Check",
+  "rollback-failure-protocol": "Rollback & Failure Protocol",
+  "dependency-update-safety": "Dependency Update Safety",
+  "pr-review-self-checklist": "PR Review Self-Checklist",
 };
 
 export const RULE_PACK_CURSOR_RULE_FILES: Record<
@@ -158,6 +255,18 @@ export const RULE_PACK_CURSOR_RULE_FILES: Record<
   "documentation-discipline": "documentation-discipline.mdc",
   "local-first-tooling": "local-first-tooling.mdc",
   "enterprise-backend": "enterprise-backend-discipline.mdc",
+  "result-md-workflow-discipline": "result-md-workflow-discipline.mdc",
+  "auto-error-recovery-loop": "auto-error-recovery-loop.mdc",
+  "git-automation-guardrails": "git-automation-guardrails.mdc",
+  "cicd-pipeline-discipline": "cicd-pipeline-discipline.mdc",
+  "deployment-automation-guard": "deployment-automation-guard.mdc",
+  "branch-release-policy": "branch-release-policy.mdc",
+  "rule-skill-sync-automation": "rule-skill-sync-automation.mdc",
+  "environment-secret-safety": "environment-secret-safety.mdc",
+  "smoke-test-health-check": "smoke-test-health-check.mdc",
+  "rollback-failure-protocol": "rollback-failure-protocol.mdc",
+  "dependency-update-safety": "dependency-update-safety.mdc",
+  "pr-review-self-checklist": "pr-review-self-checklist.mdc",
 };
 
 const BASE_DEFAULT_RULE_PACKS: ProjectBlueprintRulePack[] = [
@@ -165,6 +274,13 @@ const BASE_DEFAULT_RULE_PACKS: ProjectBlueprintRulePack[] = [
   "ai-coding-guardrails",
   "testing-validation",
   "documentation-discipline",
+  "result-md-workflow-discipline",
+  "auto-error-recovery-loop",
+  "git-automation-guardrails",
+  "cicd-pipeline-discipline",
+  "environment-secret-safety",
+  "smoke-test-health-check",
+  "branch-release-policy",
 ];
 
 export function getDefaultRulePacksForStack(
@@ -199,6 +315,7 @@ export type ProjectBlueprintInput = {
   projectType: ProjectBlueprintProjectType;
   stackProfile: ProjectBlueprintStackProfile;
   architectureStyle: ProjectBlueprintArchitectureStyle;
+  automationLevel: ProjectBlueprintAutomationLevel;
   rulePacks: ProjectBlueprintRulePack[];
   customNotes?: string;
 };
