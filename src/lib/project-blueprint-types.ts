@@ -137,12 +137,83 @@ export const AUTOMATION_RULE_PACKS: ProjectBlueprintRulePack[] = [
 export const CORE_RULE_PACKS: ProjectBlueprintRulePack[] =
   PROJECT_BLUEPRINT_RULE_PACKS.filter((pack) => !AUTOMATION_RULE_PACKS.includes(pack));
 
+export type RulePackGroupId =
+  | "core-safety"
+  | "automation-workflow"
+  | "deployment-release"
+  | "maintenance-review";
+
+export const RULE_PACK_GROUP_IDS: RulePackGroupId[] = [
+  "core-safety",
+  "automation-workflow",
+  "deployment-release",
+  "maintenance-review",
+];
+
+export type RulePackGroup = {
+  id: RulePackGroupId;
+  label: string;
+  packs: ProjectBlueprintRulePack[];
+};
+
+export const RULE_PACK_GROUPS: RulePackGroup[] = [
+  {
+    id: "core-safety",
+    label: "Core Safety",
+    packs: CORE_RULE_PACKS,
+  },
+  {
+    id: "automation-workflow",
+    label: "Automation Workflow",
+    packs: [
+      "result-md-workflow-discipline",
+      "auto-error-recovery-loop",
+      "git-automation-guardrails",
+      "branch-release-policy",
+      "cicd-pipeline-discipline",
+      "rule-skill-sync-automation",
+    ],
+  },
+  {
+    id: "deployment-release",
+    label: "Deployment & Release",
+    packs: [
+      "deployment-automation-guard",
+      "environment-secret-safety",
+      "smoke-test-health-check",
+      "rollback-failure-protocol",
+    ],
+  },
+  {
+    id: "maintenance-review",
+    label: "Maintenance & Review",
+    packs: ["dependency-update-safety", "pr-review-self-checklist"],
+  },
+];
+
+export const OPTIONAL_AUTOMATION_RULE_PACKS: ProjectBlueprintRulePack[] = [
+  "deployment-automation-guard",
+  "rollback-failure-protocol",
+  "rule-skill-sync-automation",
+  "dependency-update-safety",
+  "pr-review-self-checklist",
+];
+
+export const FULL_AUTOPILOT_RECOMMENDED_PACKS: ProjectBlueprintRulePack[] = [
+  "cicd-pipeline-discipline",
+  "deployment-automation-guard",
+  "environment-secret-safety",
+  "smoke-test-health-check",
+  "rollback-failure-protocol",
+];
+
 export const PROJECT_BLUEPRINT_AUTOMATION_LEVELS: ProjectBlueprintAutomationLevel[] =
   ["manual-assisted", "safe-autopilot", "full-autopilot"];
 
 export type ProjectBlueprintAutomationLevelConfig = {
   label: string;
   description: string;
+  guidanceText: string;
   safetyPolicyText: string;
 };
 
@@ -153,6 +224,8 @@ export const PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG: Record<
   "manual-assisted": {
     label: "Manual Assisted",
     description: "AI gives guidance; you decide commit, push, merge, and deploy.",
+    guidanceText:
+      "Best when you want full control over git, PRs, and deployment decisions.",
     safetyPolicyText:
       "Operate in manual-assisted mode. Provide recommendations and draft changes, but the user decides when to commit, push, open or merge pull requests, and deploy. Never merge or deploy without explicit user approval.",
   },
@@ -160,6 +233,8 @@ export const PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG: Record<
     label: "Safe Autopilot",
     description:
       "AI may branch, validate, fix errors, commit, push, and open PRs. Merge and deploy need approval.",
+    guidanceText:
+      "Recommended default. AI may branch, validate, fix, commit, push, and open PRs, but merge and deploy need your approval.",
     safetyPolicyText:
       "Operate in safe-autopilot mode. You may create feature/fix/chore/docs branches, run validation, fix errors, stage scoped files, commit after validations pass, push branches, and create pull requests. Do not merge pull requests or deploy without explicit user approval, even when CI passes.",
   },
@@ -167,6 +242,8 @@ export const PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG: Record<
     label: "Full Autopilot",
     description:
       "AI may merge and deploy automatically only when all gates pass and project policy allows.",
+    guidanceText:
+      "Advanced mode. AI may merge and deploy only if all gates pass and project policy allows. Requires strong CI, secret safety, smoke test, and rollback policies.",
     safetyPolicyText:
       "Operate in full-autopilot mode. You may merge pull requests and deploy automatically only when all CI gates pass, required environment variables are validated, smoke checks succeed, and the project's deployment and rollback policies allow it. Stop and report to RESULT.md if any gate fails or policy is unclear.",
   },
@@ -288,6 +365,65 @@ export function getDefaultRulePacksForStack(
 ): ProjectBlueprintRulePack[] {
   const stackLabel = PROJECT_BLUEPRINT_STACK_PROFILE_LABELS[stackProfile];
   const packs = new Set(BASE_DEFAULT_RULE_PACKS);
+
+  if (stackLabel.includes("Next.js")) {
+    packs.add("nextjs-app-router-safety");
+    packs.add("frontend-ui-consistency");
+  }
+
+  if (
+    stackLabel.includes("Prisma") ||
+    stackLabel.includes("PostgreSQL") ||
+    stackLabel.includes("SQLite")
+  ) {
+    packs.add("database-migration-safety");
+  }
+
+  if (stackLabel.includes("Spring Boot")) {
+    packs.add("enterprise-backend");
+    packs.add("database-migration-safety");
+  }
+
+  return PROJECT_BLUEPRINT_RULE_PACKS.filter((pack) => packs.has(pack));
+}
+
+export function getRecommendedRulePacks(
+  stackProfile: ProjectBlueprintStackProfile,
+): ProjectBlueprintRulePack[] {
+  return getDefaultRulePacksForStack(stackProfile);
+}
+
+export function getAllAutomationRulePacks(): ProjectBlueprintRulePack[] {
+  return [...AUTOMATION_RULE_PACKS];
+}
+
+export function getResetBlueprintDefaults(stackProfile: ProjectBlueprintStackProfile): {
+  automationLevel: ProjectBlueprintAutomationLevel;
+  rulePacks: ProjectBlueprintRulePack[];
+} {
+  return {
+    automationLevel: DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL,
+    rulePacks: getDefaultRulePacksForStack(stackProfile),
+  };
+}
+
+export function clearOptionalAutomationPacks(
+  rulePacks: ProjectBlueprintRulePack[],
+): ProjectBlueprintRulePack[] {
+  const optional = new Set(OPTIONAL_AUTOMATION_RULE_PACKS);
+  return rulePacks.filter((pack) => !optional.has(pack));
+}
+
+export function getManualControlRulePacks(
+  stackProfile: ProjectBlueprintStackProfile,
+): ProjectBlueprintRulePack[] {
+  const stackLabel = PROJECT_BLUEPRINT_STACK_PROFILE_LABELS[stackProfile];
+  const packs = new Set<ProjectBlueprintRulePack>([
+    "core-safe-change",
+    "ai-coding-guardrails",
+    "testing-validation",
+    "documentation-discipline",
+  ]);
 
   if (stackLabel.includes("Next.js")) {
     packs.add("nextjs-app-router-safety");

@@ -2,12 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import {
   AUTOMATION_RULE_PACKS,
+  clearOptionalAutomationPacks,
   DEFAULT_PROJECT_BLUEPRINT_AUTOMATION_LEVEL,
+  getAllAutomationRulePacks,
   getDefaultRulePacksForStack,
+  getRecommendedRulePacks,
+  getResetBlueprintDefaults,
+  OPTIONAL_AUTOMATION_RULE_PACKS,
   PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG,
   PROJECT_BLUEPRINT_AUTOMATION_LEVELS,
   PROJECT_BLUEPRINT_RULE_PACK_LABELS,
   PROJECT_BLUEPRINT_RULE_PACKS,
+  type ProjectBlueprintRulePack,
+  RULE_PACK_GROUPS,
   RULE_PACK_CURSOR_RULE_FILES,
 } from "@/lib/project-blueprint-types";
 
@@ -59,6 +66,7 @@ describe("project-blueprint-types", () => {
       const config = PROJECT_BLUEPRINT_AUTOMATION_LEVEL_CONFIG[level];
       expect(config.label).toBeTruthy();
       expect(config.description).toBeTruthy();
+      expect(config.guidanceText).toBeTruthy();
       expect(config.safetyPolicyText).toBeTruthy();
     }
   });
@@ -91,5 +99,49 @@ describe("project-blueprint-types", () => {
 
     expect(defaults).toContain("enterprise-backend");
     expect(defaults).toContain("database-migration-safety");
+  });
+
+  it("groups all 21 rule packs exactly once", () => {
+    const grouped = RULE_PACK_GROUPS.flatMap((group) => group.packs);
+    expect(grouped).toHaveLength(21);
+    expect(new Set(grouped).size).toBe(21);
+    for (const pack of PROJECT_BLUEPRINT_RULE_PACKS) {
+      expect(grouped).toContain(pack);
+    }
+  });
+
+  it("exposes optional automation rule packs", () => {
+    expect(OPTIONAL_AUTOMATION_RULE_PACKS).toEqual(OPTIONAL_AUTOMATION_PACKS);
+  });
+
+  it("getRecommendedRulePacks matches stack defaults", () => {
+    expect(getRecommendedRulePacks("nextjs-prisma-sqlite")).toEqual(
+      getDefaultRulePacksForStack("nextjs-prisma-sqlite"),
+    );
+  });
+
+  it("getAllAutomationRulePacks returns all automation packs", () => {
+    expect(getAllAutomationRulePacks()).toEqual(AUTOMATION_RULE_PACKS);
+  });
+
+  it("getResetBlueprintDefaults resets to safe-autopilot and stack defaults", () => {
+    const reset = getResetBlueprintDefaults("nextjs-prisma-sqlite");
+    expect(reset.automationLevel).toBe("safe-autopilot");
+    expect(reset.rulePacks).toEqual(getDefaultRulePacksForStack("nextjs-prisma-sqlite"));
+  });
+
+  it("clearOptionalAutomationPacks removes optional packs only", () => {
+    const withOptional: ProjectBlueprintRulePack[] = [
+      ...getDefaultRulePacksForStack("nextjs-prisma-sqlite"),
+      "deployment-automation-guard",
+      "pr-review-self-checklist",
+    ];
+    const cleared = clearOptionalAutomationPacks(withOptional);
+
+    for (const pack of OPTIONAL_AUTOMATION_PACKS) {
+      expect(cleared).not.toContain(pack);
+    }
+    expect(cleared).toContain("core-safe-change");
+    expect(cleared).toContain("cicd-pipeline-discipline");
   });
 });

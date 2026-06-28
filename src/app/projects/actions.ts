@@ -48,6 +48,7 @@ export async function detectProjectMetadataAction(
       repositoryUrl: result.repositoryUrl,
       localPath: result.localPath,
       warnings: result.warnings,
+      blueprint: result.blueprint,
     },
     message: "Project details detected. Review before creating.",
   };
