@@ -1,17 +1,13 @@
 import Link from "next/link";
-import { ArrowRight, FolderKanban, ListTodo } from "lucide-react";
+import { ArrowRight, FolderKanban, ListTodo, Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LinkList, LinkListCard } from "@/components/ui/link-list-card";
+import { SectionHeader } from "@/components/ui/section-header";
+import { StatCard } from "@/components/ui/stat-card";
 import { cn } from "@/lib/utils";
 import { featureStatusLabel, formatRelativeTime } from "@/lib/format";
 import { getDashboardOverview } from "@/services/dashboard";
@@ -32,164 +28,136 @@ export default async function DashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/80 bg-card/50 shadow-sm backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Projects</CardDescription>
-            <CardTitle className="font-heading text-3xl tabular-nums">
-              {data.projectCount}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Registered in ManDev
-          </CardContent>
-        </Card>
-        <Card className="border-border/80 bg-card/50 shadow-sm backdrop-blur-sm sm:col-span-2">
-          <CardHeader className="pb-2">
-            <CardDescription>Features by status</CardDescription>
-            <CardTitle className="font-heading text-lg">Pipeline</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
+        <StatCard
+          label="Projects"
+          value={data.projectCount}
+          hint="Registered in ManDev"
+        />
+        <StatCard
+          label="Features"
+          value={featureTotal}
+          hint="Across all projects"
+          className="sm:col-span-1"
+        >
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {["draft", "ready", "in_progress", "done"].map((s) => (
-              <Badge key={s} variant="secondary" className="tabular-nums">
+              <StatusBadge
+                key={s}
+                variant={
+                  s === "done"
+                    ? "done"
+                    : s === "in_progress"
+                      ? "in_progress"
+                      : s === "ready"
+                        ? "ready"
+                        : "draft"
+                }
+              >
                 {featureStatusLabel(s)}: {data.featuresByStatus[s] ?? 0}
-              </Badge>
+              </StatusBadge>
             ))}
-            <span className="ml-auto text-xs text-muted-foreground">
-              Total {featureTotal}
-            </span>
-          </CardContent>
-        </Card>
-        <Card className="border-border/80 bg-card/50 shadow-sm backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Quick actions</CardDescription>
-            <CardTitle className="font-heading text-base">Navigate</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+          </div>
+        </StatCard>
+        <StatCard
+          label="Quick actions"
+          value={
+            <span className="text-lg font-medium sm:text-xl">Get started</span>
+          }
+          className="sm:col-span-2 lg:col-span-2"
+        >
+          <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href="/projects/new"
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
-                "inline-flex w-full items-center justify-between gap-2",
+                "inline-flex items-center gap-1.5",
               )}
             >
+              <Plus className="size-3.5" />
               New project
-              <ArrowRight className="size-4" />
             </Link>
             <Link
               href="/features/new"
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
-                "inline-flex w-full items-center justify-between gap-2",
+                "inline-flex items-center gap-1.5",
               )}
             >
+              <Plus className="size-3.5" />
               New feature
-              <ArrowRight className="size-4" />
             </Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-10 grid gap-8 lg:grid-cols-2">
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-lg font-semibold tracking-tight">
-              Recent projects
-            </h2>
             <Link
-              href="/projects"
+              href="/backlog"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-muted-foreground",
+                "inline-flex items-center gap-1.5 text-muted-foreground",
               )}
             >
-              View all
+              View backlog
+              <ArrowRight className="size-3.5" />
             </Link>
           </div>
+        </StatCard>
+      </div>
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-2">
+        <section className="space-y-3">
+          <SectionHeader
+            title="Recent projects"
+            action={{ label: "View all", href: "/projects" }}
+          />
           {data.recentProjects.length === 0 ? (
             <EmptyState
               title="No projects yet"
               description="Add your first repository or app to start tracking features."
             >
-              <Link href="/projects/new" className={buttonVariants()}>
+              <Link href="/projects/new" className={buttonVariants({ size: "sm" })}>
                 Add project
               </Link>
             </EmptyState>
           ) : (
-            <ul className="space-y-2">
+            <LinkList>
               {data.recentProjects.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/projects/${p.id}`}>
-                    <Card className="transition-colors hover:border-primary/30 hover:bg-muted/30">
-                      <CardContent className="flex items-center gap-3 py-4">
-                        <span className="flex size-9 items-center justify-center rounded-lg bg-muted">
-                          <FolderKanban className="size-4 text-muted-foreground" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{p.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {p._count.features} features · updated{" "}
-                            {formatRelativeTime(p.updatedAt)}
-                          </p>
-                        </div>
-                        <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <LinkListCard
+                    href={`/projects/${p.id}`}
+                    icon={FolderKanban}
+                    title={p.name}
+                    meta={`${p._count.features} features · updated ${formatRelativeTime(p.updatedAt)}`}
+                  />
                 </li>
               ))}
-            </ul>
+            </LinkList>
           )}
         </section>
 
         <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-lg font-semibold tracking-tight">
-              Recent features
-            </h2>
-            <Link
-              href="/features"
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-muted-foreground",
-              )}
-            >
-              View all
-            </Link>
-          </div>
+          <SectionHeader
+            title="Recent features"
+            action={{ label: "View all", href: "/features" }}
+          />
           {data.recentFeatures.length === 0 ? (
             <EmptyState
               title="No features yet"
               description="Capture specs and status for work you route to Cursor or PRs."
             >
-              <Link href="/features/new" className={buttonVariants()}>
+              <Link href="/features/new" className={buttonVariants({ size: "sm" })}>
                 Add feature
               </Link>
             </EmptyState>
           ) : (
-            <ul className="space-y-2">
+            <LinkList>
               {data.recentFeatures.map((f) => (
                 <li key={f.id}>
-                  <Link href={`/features/${f.id}`}>
-                    <Card className="transition-colors hover:border-primary/30 hover:bg-muted/30">
-                      <CardContent className="flex items-start gap-3 py-4">
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                          <ListTodo className="size-4 text-muted-foreground" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{f.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {f.project.name} ·{" "}
-                            {featureStatusLabel(f.status)} ·{" "}
-                            {formatRelativeTime(f.updatedAt)}
-                          </p>
-                        </div>
-                        <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <LinkListCard
+                    href={`/features/${f.id}`}
+                    icon={ListTodo}
+                    title={f.title}
+                    meta={`${f.project.name} · ${featureStatusLabel(f.status)} · ${formatRelativeTime(f.updatedAt)}`}
+                  />
                 </li>
               ))}
-            </ul>
+            </LinkList>
           )}
         </section>
       </div>
